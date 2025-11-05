@@ -46,6 +46,8 @@ export function middleware(request: NextRequest) {
       finance_manager: '/finance/dashboard',
       client: '/client/projects',
       vendor: '/vendor/orders',
+      hr_manager: '/hr/dashboard',
+      employee: '/employee/dashboard',
     };
     
     const redirectPath = redirectMap[payload.role] || '/auth/login';

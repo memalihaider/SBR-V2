@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuthStore } from '@/stores/auth';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { CurrencySwitcher } from '@/components/currency-switcher';
 
 export default function SalesLayout({
   children,
@@ -133,6 +134,7 @@ export default function SalesLayout({
                 Sales Management
               </h2>
               <div className="flex items-center space-x-4">
+                <CurrencySwitcher />
                 <div className="text-right">
                   <p className="text-sm font-semibold text-gray-900">
                     {user.firstName} {user.lastName}

@@ -70,7 +70,7 @@ export default function FinancialReportsPage() {
             <CardTitle className="text-sm font-medium text-gray-600">Total Revenue</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-600">${totalRevenue.toLocaleString()}</div>
+            <div className="text-3xl font-bold text-red-600">${totalRevenue.toLocaleString()}</div>
             <p className="text-sm text-gray-500 mt-1">+12.5% from last period</p>
           </CardContent>
         </Card>
@@ -147,12 +147,12 @@ export default function FinancialReportsPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex justify-between items-center p-4 bg-green-50 rounded-lg">
+              <div className="flex justify-between items-center p-4 bg-red-50 rounded-lg">
                 <div>
                   <p className="text-sm text-gray-600">Total Revenue</p>
-                  <p className="text-2xl font-bold text-green-700">${projectRevenue.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-red-700">${projectRevenue.toLocaleString()}</p>
                 </div>
-                <svg className="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-12 h-12 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>

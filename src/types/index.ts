@@ -9,6 +9,8 @@ export type UserRole =
   | 'inventory_manager'
   | 'project_manager'
   | 'finance_manager'
+  | 'hr_manager'
+  | 'employee'
   | 'client'
   | 'vendor';
 
@@ -26,6 +28,7 @@ export type Module =
   | 'inventory'
   | 'projects'
   | 'finance'
+  | 'hr'
   | 'quotations'
   | 'reports'
   | 'settings';
@@ -723,6 +726,370 @@ export interface NavigationItem {
   children?: NavigationItem[];
   requiredPermissions?: Permission[];
   badge?: string | number;
+}
+
+// =======================
+// COMPANY SETTINGS
+// =======================
+
+export interface CompanySettings {
+  companyName: string;
+  logoUrl: string;
+  tagline?: string;
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    country: string;
+    zipCode: string;
+  };
+  contact: {
+    phone: string;
+    email: string;
+    website?: string;
+  };
+  taxInfo: {
+    taxId: string;
+    registrationNumber?: string;
+  };
+  invoiceSettings: {
+    termsAndConditions: string;
+    paymentTerms: string;
+    lateFeePolicy?: string;
+    defaultDueDays: number;
+    footerText?: string;
+  };
+  banking: {
+    bankName: string;
+    accountNumber: string;
+    routingNumber: string;
+    swiftCode?: string;
+  };
+}
+
+// =======================
+// HUMAN RESOURCES TYPES
+// =======================
+
+export type AttendanceStatus = 
+  | 'present'
+  | 'absent'
+  | 'late'
+  | 'half_day'
+  | 'on_leave'
+  | 'holiday'
+  | 'weekend';
+
+export type LeaveType = 
+  | 'annual'
+  | 'sick'
+  | 'maternity'
+  | 'paternity'
+  | 'emergency'
+  | 'unpaid';
+
+export type LeaveStatus = 
+  | 'pending'
+  | 'approved'
+  | 'rejected'
+  | 'cancelled';
+
+export interface Employee {
+  id: string;
+  employeeId: string;
+  userId: string; // Reference to User
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  department: string;
+  position: string;
+  managerId?: string;
+  hireDate: Date;
+  salary: number;
+  isActive: boolean;
+  avatar?: string;
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    country: string;
+    zipCode: string;
+  };
+  emergencyContact: {
+    name: string;
+    relationship: string;
+    phone: string;
+  };
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Attendance {
+  id: string;
+  employeeId: string;
+  date: Date;
+  checkInTime?: Date;
+  checkOutTime?: Date;
+  status: AttendanceStatus;
+  hoursWorked: number;
+  breakDuration: number; // in minutes
+  location?: string;
+  ipAddress?: string;
+  notes?: string;
+  approvedBy?: string; // User ID
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface LeaveRequest {
+  id: string;
+  employeeId: string;
+  leaveType: LeaveType;
+  startDate: Date;
+  endDate: Date;
+  totalDays: number;
+  reason: string;
+  status: LeaveStatus;
+  approvedBy?: string; // User ID
+  approvedAt?: Date;
+  rejectionReason?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Department {
+  id: string;
+  name: string;
+  code: string;
+  description?: string;
+  managerId: string; // User ID
+  parentDepartmentId?: string;
+  budget?: number;
+  employeeCount: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Payroll {
+  id: string;
+  employeeId: string;
+  period: {
+    startDate: Date;
+    endDate: Date;
+  };
+  basicSalary: number;
+  allowances: Array<{
+    type: string;
+    amount: number;
+    description?: string;
+  }>;
+  deductions: Array<{
+    type: string;
+    amount: number;
+    description?: string;
+  }>;
+  grossPay: number;
+  netPay: number;
+  taxAmount: number;
+  paymentDate?: Date;
+  paymentMethod: string;
+  status: 'pending' | 'processed' | 'paid';
+  createdBy: string; // User ID
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface PerformanceReview {
+  id: string;
+  employeeId: string;
+  reviewerId: string; // User ID
+  reviewPeriod: {
+    startDate: Date;
+    endDate: Date;
+  };
+  overallRating: number; // 1-5
+  categories: Array<{
+    name: string;
+    rating: number;
+    comments: string;
+  }>;
+  goals: Array<{
+    description: string;
+    status: 'achieved' | 'partially_achieved' | 'not_achieved';
+    comments: string;
+  }>;
+  developmentAreas: string[];
+  overallComments: string;
+  nextReviewDate?: Date;
+  status: 'draft' | 'submitted' | 'reviewed' | 'approved';
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// =======================
+// RECRUITMENT TYPES
+// =======================
+
+export type JobStatus = 
+  | 'draft'
+  | 'active'
+  | 'paused'
+  | 'closed'
+  | 'filled';
+
+export type JobPriority = 
+  | 'low'
+  | 'medium'
+  | 'high'
+  | 'urgent';
+
+export type CandidateStatus = 
+  | 'new'
+  | 'screening'
+  | 'interview_scheduled'
+  | 'interviewed'
+  | 'technical_review'
+  | 'final_interview'
+  | 'offer_extended'
+  | 'offer_accepted'
+  | 'offer_rejected'
+  | 'hired'
+  | 'rejected'
+  | 'withdrawn';
+
+export type InterviewType = 
+  | 'phone_screening'
+  | 'technical_interview'
+  | 'behavioral_interview'
+  | 'final_interview'
+  | 'panel_interview';
+
+export type InterviewStatus = 
+  | 'scheduled'
+  | 'completed'
+  | 'cancelled'
+  | 'no_show';
+
+export interface JobPosting {
+  id: string;
+  title: string;
+  department: string;
+  location: string;
+  employmentType: 'full_time' | 'part_time' | 'contract' | 'internship';
+  experienceLevel: 'entry' | 'mid' | 'senior' | 'executive';
+  salaryRange: {
+    min: number;
+    max: number;
+    currency: string;
+  };
+  description: string;
+  requirements: string[];
+  responsibilities: string[];
+  benefits: string[];
+  skills: string[];
+  status: JobStatus;
+  priority: JobPriority;
+  postedBy: string; // User ID
+  postedDate: Date;
+  applicationDeadline?: Date;
+  applicationsCount: number;
+  viewsCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Candidate {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  resumeUrl?: string;
+  coverLetter?: string;
+  portfolioUrl?: string;
+  linkedinUrl?: string;
+  currentPosition?: string;
+  currentCompany?: string;
+  experienceYears: number;
+  education: Array<{
+    degree: string;
+    institution: string;
+    graduationYear: number;
+    gpa?: number;
+  }>;
+  skills: string[];
+  expectedSalary?: {
+    min: number;
+    max: number;
+    currency: string;
+  };
+  availabilityDate?: Date;
+  status: CandidateStatus;
+  appliedDate: Date;
+  lastActivityDate: Date;
+  notes: string[];
+  rating: number; // 1-5 stars
+  source: 'website' | 'referral' | 'linkedin' | 'indeed' | 'other';
+  referredBy?: string; // User ID
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface JobApplication {
+  id: string;
+  jobId: string;
+  candidateId: string;
+  status: CandidateStatus;
+  appliedDate: Date;
+  lastUpdated: Date;
+  currentStage: string;
+  interviewRounds: Interview[];
+  offerDetails?: {
+    salary: number;
+    startDate: Date;
+    benefits: string[];
+  };
+  rejectionReason?: string;
+  notes: string[];
+  rating: number; // 1-5
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Interview {
+  id: string;
+  applicationId: string;
+  interviewType: InterviewType;
+  scheduledDate: Date;
+  duration: number; // in minutes
+  interviewers: string[]; // User IDs
+  location: string; // physical location or virtual link
+  status: InterviewStatus;
+  feedback?: {
+    rating: number; // 1-5
+    strengths: string[];
+    weaknesses: string[];
+    recommendation: 'hire' | 'reject' | 'consider' | 'strong_hire';
+    notes: string;
+    interviewerId: string;
+    submittedAt: Date;
+  };
+  rescheduleReason?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface RecruitmentMetrics {
+  totalJobsPosted: number;
+  activeJobs: number;
+  totalApplications: number;
+  applicationsThisMonth: number;
+  averageTimeToHire: number; // in days
+  offerAcceptanceRate: number;
+  candidateQualityScore: number; // average rating
+  sourceEffectiveness: Record<string, number>; // conversion rates by source
 }
 
 // Export all as default for easier importing

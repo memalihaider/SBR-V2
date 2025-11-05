@@ -5,11 +5,25 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import mockData from '@/lib/mock-data';
+import { Product } from '@/types';
 
 export default function StockManagementPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'low' | 'out'>('all');
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isAdjustDialogOpen, setIsAdjustDialogOpen] = useState(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
+  const [adjustmentQuantity, setAdjustmentQuantity] = useState('');
+  const [adjustmentReason, setAdjustmentReason] = useState('');
+  const [adjustmentType, setAdjustmentType] = useState<'add' | 'remove'>('add');
+  const [adjustmentNotes, setAdjustmentNotes] = useState('');
 
   // Filter products based on stock levels
   const getFilteredProducts = () => {
@@ -22,7 +36,7 @@ export default function StockManagementPage() {
     }
 
     if (searchTerm) {
-      filtered = filtered.filter(p => 
+      filtered = filtered.filter(p =>
         p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         p.sku.toLowerCase().includes(searchTerm.toLowerCase())
       );
@@ -39,7 +53,38 @@ export default function StockManagementPage() {
   const getStockStatus = (quantity: number, minLevel: number) => {
     if (quantity === 0) return { label: 'Out of Stock', color: 'bg-red-100 text-red-800' };
     if (quantity <= minLevel) return { label: 'Low Stock', color: 'bg-yellow-100 text-yellow-800' };
-    return { label: 'In Stock', color: 'bg-green-100 text-green-800' };
+    return { label: 'In Stock', color: 'bg-red-100 text-red-800' };
+  };
+
+  const handleStockAdjustment = (product: Product, type: 'add' | 'remove', quantity: number, reason: string, notes: string) => {
+    // In a real app, this would update the database
+    console.log(`Adjusting stock for ${product.name}: ${type === 'add' ? '+' : '-'}${quantity} units`);
+    console.log(`Reason: ${reason}, Notes: ${notes}`);
+
+    // For demo purposes, we'll just close the dialogs
+    setIsAdjustDialogOpen(false);
+    setIsAddDialogOpen(false);
+    setIsRemoveDialogOpen(false);
+    setSelectedProduct(null);
+    setAdjustmentQuantity('');
+    setAdjustmentReason('');
+    setAdjustmentNotes('');
+  };
+
+  const openAddStockDialog = (product: Product) => {
+    setSelectedProduct(product);
+    setAdjustmentType('add');
+    setIsAddDialogOpen(true);
+  };
+
+  const openRemoveStockDialog = (product: Product) => {
+    setSelectedProduct(product);
+    setAdjustmentType('remove');
+    setIsRemoveDialogOpen(true);
+  };
+
+  const openAdjustStockDialog = () => {
+    setIsAdjustDialogOpen(true);
   };
 
   return (
@@ -50,17 +95,150 @@ export default function StockManagementPage() {
           <h1 className="text-3xl font-bold text-gray-900">Stock Management</h1>
           <p className="text-gray-600 mt-1">Monitor and manage inventory levels</p>
         </div>
-        <Button className="bg-red-600 hover:bg-red-700 text-white">
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Adjust Stock
-        </Button>
+        <Dialog open={isAdjustDialogOpen} onOpenChange={setIsAdjustDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={openAdjustStockDialog}>
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Adjust Stock
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="bg-white border border-gray-200 shadow-lg max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-semibold text-gray-900">Bulk Stock Adjustment</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-6">
+              <Tabs defaultValue="add" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="add">Add Stock</TabsTrigger>
+                  <TabsTrigger value="remove">Remove Stock</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="add" className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="add-product">Select Product</Label>
+                      <Select>
+                        <SelectTrigger className="bg-white border-gray-300">
+                          <SelectValue placeholder="Choose product" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white border border-gray-200">
+                          {mockData.products.slice(0, 10).map((product) => (
+                            <SelectItem key={product.id} value={product.id}>
+                              {product.name} (Current: {product.currentStock})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="add-quantity">Quantity to Add</Label>
+                      <Input
+                        id="add-quantity"
+                        type="number"
+                        placeholder="Enter quantity"
+                        className="bg-white border-gray-300"
+                        min="1"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="add-reason">Reason</Label>
+                    <Select>
+                      <SelectTrigger className="bg-white border-gray-300">
+                        <SelectValue placeholder="Select reason" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border border-gray-200">
+                        <SelectItem value="purchase">New Purchase</SelectItem>
+                        <SelectItem value="return">Customer Return</SelectItem>
+                        <SelectItem value="adjustment">Stock Adjustment</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="add-notes">Notes</Label>
+                    <Textarea
+                      id="add-notes"
+                      placeholder="Additional notes..."
+                      className="bg-white border-gray-300"
+                      rows={3}
+                    />
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="remove" className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="remove-product">Select Product</Label>
+                      <Select>
+                        <SelectTrigger className="bg-white border-gray-300">
+                          <SelectValue placeholder="Choose product" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white border border-gray-200">
+                          {mockData.products.slice(0, 10).map((product) => (
+                            <SelectItem key={product.id} value={product.id}>
+                              {product.name} (Current: {product.currentStock})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="remove-quantity">Quantity to Remove</Label>
+                      <Input
+                        id="remove-quantity"
+                        type="number"
+                        placeholder="Enter quantity"
+                        className="bg-white border-gray-300"
+                        min="1"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="remove-reason">Reason</Label>
+                    <Select>
+                      <SelectTrigger className="bg-white border-gray-300">
+                        <SelectValue placeholder="Select reason" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border border-gray-200">
+                        <SelectItem value="sale">Sale</SelectItem>
+                        <SelectItem value="damage">Damaged/Lost</SelectItem>
+                        <SelectItem value="return">Vendor Return</SelectItem>
+                        <SelectItem value="adjustment">Stock Adjustment</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="remove-notes">Notes</Label>
+                    <Textarea
+                      id="remove-notes"
+                      placeholder="Additional notes..."
+                      className="bg-white border-gray-300"
+                      rows={3}
+                    />
+                  </div>
+                </TabsContent>
+              </Tabs>
+
+              <div className="flex justify-end gap-3">
+                <Button variant="outline" onClick={() => setIsAdjustDialogOpen(false)} className="bg-white border-gray-300 hover:bg-gray-50">
+                  Cancel
+                </Button>
+                <Button className="bg-red-600 hover:bg-red-700 text-white">
+                  Apply Adjustment
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
+        <Card className="bg-white border border-gray-200 shadow-sm">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-gray-600">Total Products</CardTitle>
           </CardHeader>
@@ -70,7 +248,7 @@ export default function StockManagementPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white border border-gray-200 shadow-sm">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-gray-600">Low Stock Items</CardTitle>
           </CardHeader>
@@ -80,7 +258,7 @@ export default function StockManagementPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white border border-gray-200 shadow-sm">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-gray-600">Out of Stock</CardTitle>
           </CardHeader>
@@ -90,19 +268,19 @@ export default function StockManagementPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white border border-gray-200 shadow-sm">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-gray-600">Total Stock Value</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-600">${totalValue.toLocaleString()}</div>
+            <div className="text-3xl font-bold text-red-600">${totalValue.toLocaleString()}</div>
             <p className="text-sm text-gray-500 mt-1">Inventory worth</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Filters and Search */}
-      <Card>
+      <Card className="bg-white border border-gray-200 shadow-sm">
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
@@ -110,25 +288,28 @@ export default function StockManagementPage() {
                 placeholder="Search by product name or SKU..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full"
+                className="w-full bg-white border-gray-300"
               />
             </div>
             <div className="flex gap-2">
               <Button
                 variant={filterStatus === 'all' ? 'default' : 'outline'}
                 onClick={() => setFilterStatus('all')}
+                className={filterStatus === 'all' ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-white border-gray-300 hover:bg-gray-50'}
               >
                 All Products
               </Button>
               <Button
                 variant={filterStatus === 'low' ? 'default' : 'outline'}
                 onClick={() => setFilterStatus('low')}
+                className={filterStatus === 'low' ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-white border-gray-300 hover:bg-gray-50'}
               >
                 Low Stock
               </Button>
               <Button
                 variant={filterStatus === 'out' ? 'default' : 'outline'}
                 onClick={() => setFilterStatus('out')}
+                className={filterStatus === 'out' ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-white border-gray-300 hover:bg-gray-50'}
               >
                 Out of Stock
               </Button>
@@ -138,7 +319,7 @@ export default function StockManagementPage() {
       </Card>
 
       {/* Products Table */}
-      <Card>
+      <Card className="bg-white border border-gray-200 shadow-sm">
         <CardHeader>
           <CardTitle>Stock Levels ({products.length} items)</CardTitle>
         </CardHeader>
@@ -146,7 +327,7 @@ export default function StockManagementPage() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b">
+                <tr className="border-b border-gray-200">
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">SKU</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Product Name</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Category</th>
@@ -161,9 +342,9 @@ export default function StockManagementPage() {
                 {products.map((product) => {
                   const status = getStockStatus(product.currentStock, product.minStockLevel);
                   const stockValue = product.sellingPrice * product.currentStock;
-                  
+
                   return (
-                    <tr key={product.id} className="border-b hover:bg-gray-50">
+                    <tr key={product.id} className="border-b border-gray-100 hover:bg-gray-50">
                       <td className="py-3 px-4">
                         <span className="font-mono text-sm text-gray-600">{product.sku}</span>
                       </td>
@@ -185,20 +366,170 @@ export default function StockManagementPage() {
                         <Badge className={status.color}>{status.label}</Badge>
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <span className="font-medium text-green-600">${stockValue.toLocaleString()}</span>
+                        <span className="font-medium text-red-600">${stockValue.toLocaleString()}</span>
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center justify-center gap-2">
-                          <Button size="sm" variant="outline">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                            </svg>
-                          </Button>
-                          <Button size="sm" variant="outline">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                            </svg>
-                          </Button>
+                          <Dialog open={isAddDialogOpen && selectedProduct?.id === product.id} onOpenChange={(open) => {
+                            setIsAddDialogOpen(open);
+                            if (!open) setSelectedProduct(null);
+                          }}>
+                            <DialogTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openAddStockDialog(product)}
+                                className="bg-white border-gray-300 hover:bg-red-50 hover:border-red-300"
+                              >
+                                <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                </svg>
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="bg-white border border-gray-200 shadow-lg max-w-md">
+                              <DialogHeader>
+                                <DialogTitle className="text-lg font-semibold text-gray-900">Add Stock - {product.name}</DialogTitle>
+                              </DialogHeader>
+                              <div className="space-y-4">
+                                <div>
+                                  <Label htmlFor="add-qty">Quantity to Add</Label>
+                                  <Input
+                                    id="add-qty"
+                                    type="number"
+                                    placeholder="Enter quantity"
+                                    value={adjustmentQuantity}
+                                    onChange={(e) => setAdjustmentQuantity(e.target.value)}
+                                    className="bg-white border-gray-300"
+                                    min="1"
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor="add-reason-select">Reason</Label>
+                                  <Select value={adjustmentReason} onValueChange={setAdjustmentReason}>
+                                    <SelectTrigger className="bg-white border-gray-300">
+                                      <SelectValue placeholder="Select reason" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-white border border-gray-200">
+                                      <SelectItem value="purchase">New Purchase</SelectItem>
+                                      <SelectItem value="return">Customer Return</SelectItem>
+                                      <SelectItem value="adjustment">Stock Adjustment</SelectItem>
+                                      <SelectItem value="other">Other</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div>
+                                  <Label htmlFor="add-notes-input">Notes</Label>
+                                  <Textarea
+                                    id="add-notes-input"
+                                    placeholder="Additional notes..."
+                                    value={adjustmentNotes}
+                                    onChange={(e) => setAdjustmentNotes(e.target.value)}
+                                    className="bg-white border-gray-300"
+                                    rows={2}
+                                  />
+                                </div>
+                                <div className="flex justify-end gap-3">
+                                  <Button
+                                    variant="outline"
+                                    onClick={() => setIsAddDialogOpen(false)}
+                                    className="bg-white border-gray-300 hover:bg-gray-50"
+                                  >
+                                    Cancel
+                                  </Button>
+                                  <Button
+                                    onClick={() => handleStockAdjustment(product, 'add', parseInt(adjustmentQuantity) || 0, adjustmentReason, adjustmentNotes)}
+                                    className="bg-red-600 hover:bg-red-700 text-white"
+                                  >
+                                    Add Stock
+                                  </Button>
+                                </div>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+
+                          <Dialog open={isRemoveDialogOpen && selectedProduct?.id === product.id} onOpenChange={(open) => {
+                            setIsRemoveDialogOpen(open);
+                            if (!open) setSelectedProduct(null);
+                          }}>
+                            <DialogTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openRemoveStockDialog(product)}
+                                className="bg-white border-gray-300 hover:bg-red-50 hover:border-red-300"
+                              >
+                                <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                                </svg>
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="bg-white border border-gray-200 shadow-lg max-w-md">
+                              <DialogHeader>
+                                <DialogTitle className="text-lg font-semibold text-gray-900">Remove Stock - {product.name}</DialogTitle>
+                              </DialogHeader>
+                              <div className="space-y-4">
+                                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                                  <p className="text-sm text-yellow-800">
+                                    Current stock: <span className="font-semibold">{product.currentStock} units</span>
+                                  </p>
+                                </div>
+                                <div>
+                                  <Label htmlFor="remove-qty">Quantity to Remove</Label>
+                                  <Input
+                                    id="remove-qty"
+                                    type="number"
+                                    placeholder="Enter quantity"
+                                    value={adjustmentQuantity}
+                                    onChange={(e) => setAdjustmentQuantity(e.target.value)}
+                                    className="bg-white border-gray-300"
+                                    min="1"
+                                    max={product.currentStock}
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor="remove-reason-select">Reason</Label>
+                                  <Select value={adjustmentReason} onValueChange={setAdjustmentReason}>
+                                    <SelectTrigger className="bg-white border-gray-300">
+                                      <SelectValue placeholder="Select reason" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-white border border-gray-200">
+                                      <SelectItem value="sale">Sale</SelectItem>
+                                      <SelectItem value="damage">Damaged/Lost</SelectItem>
+                                      <SelectItem value="return">Vendor Return</SelectItem>
+                                      <SelectItem value="adjustment">Stock Adjustment</SelectItem>
+                                      <SelectItem value="other">Other</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div>
+                                  <Label htmlFor="remove-notes-input">Notes</Label>
+                                  <Textarea
+                                    id="remove-notes-input"
+                                    placeholder="Additional notes..."
+                                    value={adjustmentNotes}
+                                    onChange={(e) => setAdjustmentNotes(e.target.value)}
+                                    className="bg-white border-gray-300"
+                                    rows={2}
+                                  />
+                                </div>
+                                <div className="flex justify-end gap-3">
+                                  <Button
+                                    variant="outline"
+                                    onClick={() => setIsRemoveDialogOpen(false)}
+                                    className="bg-white border-gray-300 hover:bg-gray-50"
+                                  >
+                                    Cancel
+                                  </Button>
+                                  <Button
+                                    onClick={() => handleStockAdjustment(product, 'remove', parseInt(adjustmentQuantity) || 0, adjustmentReason, adjustmentNotes)}
+                                    className="bg-red-600 hover:bg-red-700 text-white"
+                                  >
+                                    Remove Stock
+                                  </Button>
+                                </div>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
                         </div>
                       </td>
                     </tr>

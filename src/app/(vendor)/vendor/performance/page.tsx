@@ -4,8 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import mockData from '@/lib/mock-data';
+import { useCurrency } from '@/lib/currency';
 
 export default function VendorPerformancePage() {
+  const { formatAmount } = useCurrency();
+
   // Mock performance data
   const performanceMetrics = {
     overallRating: 4.7,
@@ -153,7 +156,7 @@ export default function VendorPerformancePage() {
                     </div>
                     <div className="flex items-center gap-4 text-sm text-gray-600">
                       <span>{stat.orders} orders</span>
-                      <span className="font-semibold text-green-600">${(stat.revenue / 1000).toFixed(0)}K</span>
+                      <span className="font-semibold text-green-600">{formatAmount(stat.revenue)}</span>
                     </div>
                   </div>
                 </div>
@@ -189,7 +192,7 @@ export default function VendorPerformancePage() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-gray-600">Revenue</span>
-                    <span className="font-semibold text-pink-600">${(category.revenue / 1000).toFixed(0)}K</span>
+                    <span className="font-semibold text-pink-600">{formatAmount(category.revenue)}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-gray-600">Rating</span>

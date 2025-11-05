@@ -42,6 +42,8 @@ function LoginForm() {
       'inventory@largify.com': '/inventory/dashboard',
       'project@largify.com': '/project/dashboard',
       'finance@largify.com': '/finance/dashboard',
+      'hr@largify.com': '/hr/dashboard',
+      'employee@largify.com': '/employee/dashboard',
       'client@example.com': '/client/projects',
       'vendor@supplier.com': '/vendor/orders',
     };
@@ -55,6 +57,8 @@ function LoginForm() {
     { email: 'inventory@largify.com', role: 'Inventory Manager', description: 'Stock control', color: 'blue', icon: Building2 },
     { email: 'project@largify.com', role: 'Project Manager', description: 'Project oversight', color: 'purple', icon: Building2 },
     { email: 'finance@largify.com', role: 'Finance Manager', description: 'Financial controls', color: 'yellow', icon: TrendingUp },
+    { email: 'hr@largify.com', role: 'HR Manager', description: 'Human resources', color: 'amber', icon: Users },
+    { email: 'employee@largify.com', role: 'Employee', description: 'Employee portal', color: 'gray', icon: Users },
     { email: 'client@example.com', role: 'Client', description: 'Customer portal', color: 'indigo', icon: Users },
     { email: 'vendor@supplier.com', role: 'Vendor', description: 'Supplier portal', color: 'pink', icon: Building2 },
   ];
@@ -66,6 +70,8 @@ function LoginForm() {
       blue: { border: 'border-l-blue-500', bg: 'bg-blue-50', text: 'text-blue-700', badge: 'bg-blue-100 text-blue-700' },
       purple: { border: 'border-l-purple-500', bg: 'bg-purple-50', text: 'text-purple-700', badge: 'bg-purple-100 text-purple-700' },
       yellow: { border: 'border-l-yellow-500', bg: 'bg-yellow-50', text: 'text-yellow-700', badge: 'bg-yellow-100 text-yellow-700' },
+      amber: { border: 'border-l-amber-500', bg: 'bg-amber-50', text: 'text-amber-700', badge: 'bg-amber-100 text-amber-700' },
+      gray: { border: 'border-l-gray-500', bg: 'bg-gray-50', text: 'text-gray-700', badge: 'bg-gray-100 text-gray-700' },
       indigo: { border: 'border-l-indigo-500', bg: 'bg-indigo-50', text: 'text-indigo-700', badge: 'bg-indigo-100 text-indigo-700' },
       pink: { border: 'border-l-pink-500', bg: 'bg-pink-50', text: 'text-pink-700', badge: 'bg-pink-100 text-pink-700' },
     };
@@ -73,11 +79,11 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center p-4 md:p-8">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center p-4 md:p-8">
       <div className="w-full max-w-7xl">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl shadow-lg mb-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-linear-to-br from-blue-600 to-indigo-600 rounded-2xl shadow-lg mb-4">
             <span className="text-white text-2xl font-bold">L</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-2">
@@ -142,7 +148,7 @@ function LoginForm() {
                   
                   <Button 
                     type="submit" 
-                    className="w-full h-12 text-base font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all duration-200" 
+                    className="w-full h-12 text-base font-semibold bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all duration-200" 
                     disabled={isLoading}
                   >
                     {isLoading ? (
@@ -192,7 +198,7 @@ function LoginForm() {
                     >
                       <CardContent className="p-4">
                         <div className="flex items-start space-x-3">
-                          <div className={`p-2.5 ${colors.bg} rounded-lg flex-shrink-0`}>
+                          <div className={`p-2.5 ${colors.bg} rounded-lg shrink-0`}>
                             <IconComponent className={`h-5 w-5 ${colors.text}`} />
                           </div>
                           <div className="flex-1 min-w-0">
@@ -265,7 +271,7 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="min-h-screen bg-linear-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
           <p className="text-gray-600">Loading...</p>

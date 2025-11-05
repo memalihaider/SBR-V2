@@ -12,6 +12,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
       projects: ['read', 'write', 'admin', 'delete'],
       finance: ['read', 'write', 'admin', 'delete'],
       quotations: ['read', 'write', 'admin', 'delete'],
+      hr: ['read', 'write', 'admin'],
       reports: ['read', 'write', 'admin'],
       settings: ['read', 'write', 'admin'],
     },
@@ -28,6 +29,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
       projects: ['read', 'write'],
       finance: ['read'],
       quotations: ['read', 'write', 'approve'],
+      hr: [],
       reports: ['read'],
       settings: ['read'],
     },
@@ -44,6 +46,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
       projects: ['read'],
       finance: ['read'],
       quotations: ['read', 'write'],
+      hr: [],
       reports: ['read'],
       settings: ['read'],
     },
@@ -60,6 +63,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
       projects: ['read'],
       finance: ['read'],
       quotations: ['read'],
+      hr: [],
       reports: ['read'],
       settings: ['read'],
     },
@@ -76,6 +80,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
       projects: ['read', 'write', 'approve'],
       finance: ['read'],
       quotations: ['read'],
+      hr: [],
       reports: ['read'],
       settings: ['read'],
     },
@@ -91,11 +96,46 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
       inventory: ['read'],
       projects: ['read'],
       finance: ['read', 'write', 'approve'],
-      quotations: ['read', 'approve'],
+      quotations: ['read'],
+      hr: [],
       reports: ['read', 'write'],
       settings: ['read'],
     },
     dataScope: 'global',
+  },
+  
+  hr_manager: {
+    role: 'hr_manager',
+    modules: {
+      dashboard: ['read', 'write'],
+      users: ['read', 'write'],
+      crm: [],
+      inventory: [],
+      projects: ['read'],
+      finance: ['read'],
+      hr: ['read', 'write', 'approve'],
+      quotations: [],
+      reports: ['read'],
+      settings: ['read'],
+    },
+    dataScope: 'global',
+  },
+  
+  employee: {
+    role: 'employee',
+    modules: {
+      dashboard: ['read'],
+      users: ['read'],
+      crm: [],
+      inventory: [],
+      projects: ['read'],
+      finance: ['read'],
+      hr: ['read'],
+      quotations: [],
+      reports: [],
+      settings: ['read'],
+    },
+    dataScope: 'own',
   },
   
   client: {
@@ -108,6 +148,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
       projects: ['read'],
       finance: ['read'],
       quotations: ['read'],
+      hr: [],
       reports: [],
       settings: ['read'],
     },
@@ -124,6 +165,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
       projects: [],
       finance: ['read'],
       quotations: [],
+      hr: [],
       reports: [],
       settings: ['read'],
     },
@@ -190,6 +232,26 @@ export const PORTAL_CONFIGS = {
     theme: {
       primaryColor: '#0891B2', // Cyan
       logoUrl: '/logos/finance-logo.png',
+    },
+  },
+  
+  hr_manager: {
+    name: 'HR Management Portal',
+    path: '/hr',
+    defaultRoute: '/hr/dashboard',
+    theme: {
+      primaryColor: '#F59E0B', // Amber
+      logoUrl: '/logos/hr-logo.png',
+    },
+  },
+  
+  employee: {
+    name: 'Employee Portal',
+    path: '/employee',
+    defaultRoute: '/employee/dashboard',
+    theme: {
+      primaryColor: '#6B7280', // Gray
+      logoUrl: '/logos/employee-logo.png',
     },
   },
   
@@ -276,6 +338,8 @@ export const ROLE_REDIRECTS: Record<UserRole, string> = {
   inventory_manager: '/inventory/dashboard',
   project_manager: '/project/dashboard',
   finance_manager: '/finance/dashboard',
+  hr_manager: '/hr/dashboard',
+  employee: '/employee/dashboard',
   client: '/client/projects',
   vendor: '/vendor/orders',
 };
@@ -285,7 +349,7 @@ export function getPortalFromPath(pathname: string): string | null {
   if (segments.length === 0) return null;
   
   const portal = segments[0];
-  const validPortals = ['admin', 'sales', 'inventory', 'project', 'finance', 'client', 'vendor'];
+  const validPortals = ['admin', 'sales', 'inventory', 'project', 'finance', 'hr', 'employee', 'client', 'vendor'];
   
   return validPortals.includes(portal) ? portal : null;
 }

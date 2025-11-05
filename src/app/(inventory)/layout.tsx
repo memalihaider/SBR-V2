@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuthStore } from '@/stores/auth';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { CurrencySwitcher } from '@/components/currency-switcher';
 
 export default function InventoryLayout({
   children,
@@ -129,6 +130,7 @@ export default function InventoryLayout({
                 Inventory Management
               </h2>
               <div className="flex items-center space-x-4">
+                <CurrencySwitcher />
                 <div className="text-right">
                   <p className="text-sm font-semibold text-gray-900">
                     {user.firstName} {user.lastName}
