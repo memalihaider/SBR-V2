@@ -747,29 +747,31 @@ export default function AdminSettingsPage() {
           <div className="space-y-4">
             {currentEditGroup && settingsGroups.find(g => g.title === currentEditGroup)?.settings
               .filter(setting => setting.type !== 'readonly' && setting.type !== 'toggle')
-              .map((setting, index) => (
+              .map((setting, index) => {
+                const currentGroupState = settingsGroups.find(g => g.title === currentEditGroup)?.state as any;
+                return (
                 <div key={index} className="space-y-2">
                   <Label htmlFor={`edit-${setting.key}`}>{setting.name}</Label>
                   {setting.type === 'text' || setting.type === 'email' ? (
                     <Input
                       id={`edit-${setting.key}`}
                       type={setting.type}
-                      defaultValue={(settingsGroups.find(g => g.title === currentEditGroup)?.state as any)[setting.key]}
-                      onChange={(e) => handleSettingEdit(currentEditGroup, setting.key, e.target.value)}
+                      defaultValue={currentGroupState?.[setting.key!] || ''}
+                      onChange={(e) => currentEditGroup && setting.key && handleSettingEdit(currentEditGroup, setting.key, e.target.value)}
                       className="bg-white border-gray-300"
                     />
                   ) : setting.type === 'number' ? (
                     <Input
                       id={`edit-${setting.key}`}
                       type="number"
-                      defaultValue={(settingsGroups.find(g => g.title === currentEditGroup)?.state as any)[setting.key]}
-                      onChange={(e) => handleSettingEdit(currentEditGroup, setting.key, parseInt(e.target.value) || 0)}
+                      defaultValue={currentGroupState?.[setting.key!] || ''}
+                      onChange={(e) => currentEditGroup && setting.key && handleSettingEdit(currentEditGroup, setting.key, parseInt(e.target.value) || 0)}
                       className="bg-white border-gray-300"
                     />
                   ) : setting.type === 'select' ? (
                     <Select
-                      defaultValue={(settingsGroups.find(g => g.title === currentEditGroup)?.state as any)[setting.key]}
-                      onValueChange={(value) => handleSettingEdit(currentEditGroup, setting.key, value)}
+                      defaultValue={currentGroupState?.[setting.key!] || ''}
+                      onValueChange={(value) => currentEditGroup && setting.key && handleSettingEdit(currentEditGroup, setting.key, value)}
                     >
                       <SelectTrigger className="bg-white border-gray-300">
                         <SelectValue />
@@ -809,7 +811,8 @@ export default function AdminSettingsPage() {
                     </Select>
                   ) : null}
                 </div>
-              ))}
+                );
+              })}
           </div>
           <div className="flex justify-end space-x-2 mt-4">
             <Button variant="outline" onClick={() => setEditDialogOpen(false)} className="bg-white border-gray-300">

@@ -649,7 +649,7 @@ function generateCandidates(): Candidate[] {
       lastActivityDate: faker.date.between({ from: appliedDate, to: new Date() }),
       notes: Array.from({ length: faker.number.int({ min: 0, max: 5 }) }, () => faker.lorem.sentence()),
       rating: faker.number.int({ min: 1, max: 5 }),
-      source: faker.helpers.arrayElement(sources),
+      source: faker.helpers.arrayElement(sources) as Candidate['source'],
       referredBy: faker.datatype.boolean({ probability: 0.2 }) ? `user-${faker.number.int({ min: 1, max: 8 })}` : undefined,
       createdAt: appliedDate,
       updatedAt: faker.date.between({ from: appliedDate, to: new Date() })
