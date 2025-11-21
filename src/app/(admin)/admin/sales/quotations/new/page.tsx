@@ -567,392 +567,393 @@ const loadQuotationFromFirebase = async (quotationId: string): Promise<any> => {
 // PDF Generation with Images
 const generatePDFWithImages = async (quotationData: any, sections: QuotationSection[], customers: any[], products: any[], formatAmount: (amount: number) => string) => {
   const pdf = new jsPDF('p', 'mm', 'a4');
-  let currentPage = 1;
-  const pageHeight = pdf.internal.pageSize.height;
   const pageWidth = pdf.internal.pageSize.width;
-  const margin = 20;
-  let yPosition = margin;
+  const pageHeight = pdf.internal.pageSize.height;
+  const margin = 15;
+  let yPos = margin;
+  let currentPage = 1;
 
-  const enabledSections = sections.filter(s => s.enabled);
+  // Colors
+  const primaryColor = [26, 54, 93]; // Dark Blue #1a365d
+  const accentColor = [49, 130, 206]; // Blue #3182ce
+  const lightGray = [247, 250, 252]; // #f7fafc
+  const borderColor = [226, 232, 240]; // #e2e8f0
+  const textColor = [45, 55, 72]; // #2d3748
+  const lightTextColor = [113, 128, 150]; // #718096
+
   const customer = customers.find(c => c.id === quotationData.customerId);
 
-  // Function to add blue border to each page
-  const addPageBorder = () => {
-    pdf.setDrawColor(59, 130, 246); // Blue color
-    pdf.setLineWidth(1.5);
-    pdf.rect(10, 10, pageWidth - 20, pageHeight - 20); // Page border
-  };
-
-  // Function to add image to PDF
-  const addImageToPDF = async (imageUrl: string, x: number, y: number, width: number, height: number): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      if (y + height > pageHeight - margin) {
-        pdf.addPage();
-        currentPage++;
-        yPosition = margin;
-        addPageBorder(); // Add border to new page
-        resolve();
-        return;
-      }
-
-      try {
-        if (imageUrl.startsWith('data:')) {
-          pdf.addImage(imageUrl, 'JPEG', x, y, width, height);
-        } else {
-          pdf.addImage(imageUrl, 'JPEG', x, y, width, height);
-        }
-        resolve();
-      } catch (error) {
-        console.error('Error adding image to PDF:', error);
-        // If image fails to load, add a placeholder
-        pdf.rect(x, y, width, height);
-        pdf.text('Image not available', x + 5, y + height / 2);
-        resolve();
-      }
-    });
-  };
-
-  // Function to add multiple images in a grid
-  const addImageGrid = async (images: string[], maxPerRow: number = 2, imageWidth: number = 80, imageHeight: number = 60) => {
-    if (!images || images.length === 0) return;
-
-    for (let i = 0; i < images.length; i++) {
-      const row = Math.floor(i / maxPerRow);
-      const col = i % maxPerRow;
-      
-      const x = margin + col * (imageWidth + 10);
-      const y = yPosition + row * (imageHeight + 10);
-
-      if (y + imageHeight > pageHeight - margin) {
-        pdf.addPage();
-        currentPage++;
-        yPosition = margin;
-        addPageBorder(); // Add border to new page
-        // Recalculate position for new page
-        const newRow = Math.floor(i / maxPerRow);
-        const newCol = i % maxPerRow;
-        await addImageToPDF(images[i], margin + newCol * (imageWidth + 10), yPosition + newRow * (imageHeight + 10), imageWidth, imageHeight);
-      } else {
-        await addImageToPDF(images[i], x, y, imageWidth, imageHeight);
-      }
-    }
-
-    // Update yPosition after images
-    const totalRows = Math.ceil(images.length / maxPerRow);
-    yPosition += totalRows * (imageHeight + 10) + 10;
-  };
-
-  const addTextWithPageBreak = (text: string, fontSize: number = 12, isBold: boolean = false, lineHeight: number = 7) => {
-    pdf.setFontSize(fontSize);
-    pdf.setFont(isBold ? 'helvetica' : 'helvetica', isBold ? 'bold' : 'normal');
-    
-    const lines = pdf.splitTextToSize(text, pageWidth - 2 * margin);
-    
-    for (let i = 0; i < lines.length; i++) {
-      if (yPosition + lineHeight > pageHeight - margin) {
-        pdf.addPage();
-        currentPage++;
-        yPosition = margin;
-        addPageBorder(); // Add border to new page
-      }
-      pdf.text(lines[i], margin, yPosition);
-      yPosition += lineHeight;
-    }
-    yPosition += 2;
-  };
-
-  // UPDATED: Section Header with Blue Background
-  const addSectionHeader = (title: string) => {
-    if (yPosition + 20 > pageHeight - margin) {
+  // Helper: Check Page Break
+  const checkPageBreak = (heightNeeded: number) => {
+    if (yPos + heightNeeded > pageHeight - margin - 20) { // Reserve space for footer
       pdf.addPage();
       currentPage++;
-      yPosition = margin;
-      addPageBorder(); // Add border to new page
+      yPos = margin;
+      return true;
     }
+    return false;
+  };
+
+  // Helper: Draw Footer
+  const drawFooter = (pageNo: number, totalPages: number) => {
+    const footerY = pageHeight - 10;
+    pdf.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
+    pdf.line(margin, footerY - 5, pageWidth - margin, footerY - 5);
     
-    // Section header with BLUE background
-    pdf.setFillColor(59, 130, 246); // Blue color
-    pdf.rect(margin, yPosition, pageWidth - 2 * margin, 12, 'F');
+    pdf.setFontSize(8);
+    pdf.setTextColor(lightTextColor[0], lightTextColor[1], lightTextColor[2]);
+    pdf.text(`Page ${pageNo} of ${totalPages}`, pageWidth - margin, footerY, { align: 'right' });
+    pdf.text(`Generated on ${new Date().toLocaleDateString()}`, margin, footerY);
     
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(14);
+    // Reset
+    pdf.setTextColor(textColor[0], textColor[1], textColor[2]);
+  };
+
+  // Helper: Draw Section Title
+  const drawSectionTitle = (title: string) => {
+    checkPageBreak(20);
+    pdf.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
+    pdf.rect(margin, yPos, pageWidth - (margin * 2), 10, 'F');
+    
     pdf.setFont('helvetica', 'bold');
-    pdf.text(title, margin + 5, yPosition + 8);
+    pdf.setFontSize(12);
+    pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    pdf.text(title.toUpperCase(), margin + 5, yPos + 7);
     
-    yPosition += 15;
-    pdf.setTextColor(0, 0, 0);
+    yPos += 15;
+    pdf.setTextColor(textColor[0], textColor[1], textColor[2]); // Reset text color
   };
 
-  // Add border to first page
-  addPageBorder();
-
-  // Cover Page
-  addSectionHeader('QUOTATION PROPOSAL');
-  yPosition += 10;
-
-  const coverSection = sections.find(s => s.type === 'cover_page');
-  if (coverSection) {
-    // Add company logo if available
-    if (coverSection.data.companyLogo) {
-      try {
-        await addImageToPDF(coverSection.data.companyLogo, pageWidth - 70, yPosition, 50, 20);
-      } catch (error) {
-        console.error('Error adding company logo:', error);
-      }
-    }
-
-    addTextWithPageBreak(coverSection.data.companyName, 16, true);
-    addTextWithPageBreak(coverSection.data.companyAddress, 10);
-    addTextWithPageBreak(`Phone: ${coverSection.data.companyPhone}`, 10);
-    addTextWithPageBreak(`Email: ${coverSection.data.companyEmail}`, 10);
-    addTextWithPageBreak(`Website: ${coverSection.data.companyWebsite}`, 10);
-    yPosition += 20;
-
-    // Add cover images if available
-    if (coverSection.data.coverImages && coverSection.data.coverImages.length > 0) {
-      await addImageGrid(coverSection.data.coverImages, 2, 80, 60);
-      yPosition += 10;
-    }
-  }
-
-  if (customer) {
-    addTextWithPageBreak('To:', 12, true);
-    addTextWithPageBreak(customer.primaryContact.name, 12);
-    addTextWithPageBreak(customer.companyName, 12);
-    addTextWithPageBreak(`Email: ${customer.primaryContact.email}`, 10);
-    addTextWithPageBreak(`Phone: ${customer.primaryContact.phone}`, 10);
-    yPosition += 15;
-  }
-
-  addTextWithPageBreak(`Quotation Number: ${quotationData.quotationNumber}`, 12);
-  addTextWithPageBreak(`Issue Date: ${new Date(quotationData.issueDate).toLocaleDateString()}`, 12);
-  addTextWithPageBreak(`Valid Until: ${new Date(quotationData.validUntil).toLocaleDateString()}`, 12);
-  yPosition += 20;
-
-  if (coverSection?.data.letterContent) {
-    addTextWithPageBreak('Dear Valued Client,', 12);
-    addTextWithPageBreak(coverSection.data.letterContent, 11);
-    yPosition += 15;
-  }
-
-  // Process all enabled sections in SEQUENCE
-  for (const section of enabledSections) {
-    if (section.type === 'cover_page') continue;
+  // Helper: Add Text with wrapping
+  const addText = (text: string, fontSize = 10, isBold = false, color = textColor, indent = 0) => {
+    pdf.setFont('helvetica', isBold ? 'bold' : 'normal');
+    pdf.setFontSize(fontSize);
+    pdf.setTextColor(color[0], color[1], color[2]);
     
-    if (yPosition + 30 > pageHeight - margin) {
-      pdf.addPage();
-      currentPage++;
-      yPosition = margin;
-      addPageBorder(); // Add border to new page
+    const maxWidth = pageWidth - (margin * 2) - indent;
+    const lines = pdf.splitTextToSize(text || '', maxWidth);
+    const lineHeight = fontSize * 0.5; // Approximate line height in mm
+
+    if (checkPageBreak(lines.length * lineHeight)) {
+        // If page break happened, we might want to redraw header or something, but for now just continue
     }
 
-    addSectionHeader(section.title.toUpperCase());
+    lines.forEach((line: string) => {
+      checkPageBreak(lineHeight);
+      pdf.text(line, margin + indent, yPos);
+      yPos += lineHeight;
+    });
+    yPos += 2; // Small padding after text block
+  };
 
-    switch (section.type) {
-      case 'executive_summary':
-        if (section.data.summary) {
-          addTextWithPageBreak(section.data.summary, 11);
-        }
-        if (section.data.keyBenefits && section.data.keyBenefits.length > 0) {
-          yPosition += 8;
-          addTextWithPageBreak('Key Benefits:', 12, true);
-          section.data.keyBenefits.forEach((benefit: string) => {
-            addTextWithPageBreak(`• ${benefit}`, 11);
-          });
-        }
-        break;
-
-      case 'company_introduction':
-        // Add company images if available
-        if (section.data.companyImages && section.data.companyImages.length > 0) {
-          await addImageGrid(section.data.companyImages, 2, 60, 45);
-          yPosition += 5;
-        }
-
-        if (section.data.description) {
-          addTextWithPageBreak(section.data.description, 11);
-        }
-        if (section.data.achievements && section.data.achievements.length > 0) {
-          yPosition += 8;
-          addTextWithPageBreak('Achievements:', 12, true);
-          section.data.achievements.forEach((achievement: string) => {
-            addTextWithPageBreak(`• ${achievement}`, 11);
-          });
-        }
-        break;
-
-      case 'problem_statement':
-        if (section.data.currentSituation) {
-          addTextWithPageBreak(section.data.currentSituation, 11);
-        }
-        if (section.data.objectives && section.data.objectives.length > 0) {
-          yPosition += 8;
-          addTextWithPageBreak('Objectives:', 12, true);
-          section.data.objectives.forEach((objective: string) => {
-            addTextWithPageBreak(`• ${objective}`, 11);
-          });
-        }
-        break;
-
-      case 'solution_details':
-        // Add solution images if available
-        if (section.data.solutionImages && section.data.solutionImages.length > 0) {
-          await addImageGrid(section.data.solutionImages, 2, 70, 50);
-          yPosition += 5;
-        }
-
-        if (section.data.solutionOverview) {
-          addTextWithPageBreak(section.data.solutionOverview, 11);
-        }
-        if (section.data.keyFeatures && section.data.keyFeatures.length > 0) {
-          yPosition += 8;
-          addTextWithPageBreak('Key Features:', 12, true);
-          section.data.keyFeatures.forEach((feature: string) => {
-            addTextWithPageBreak(`• ${feature}`, 11);
-          });
-        }
-        break;
-
-      case 'product_specifications':
-        if (section.data.products && section.data.products.length > 0) {
-          addTextWithPageBreak('Products & Services:', 14, true);
-          
-          for (const product of section.data.products) {
-            const selectedProduct = products.find(p => p.id === product.productId);
-            if (selectedProduct) {
-              // Add product images if available
-              if (product.images && product.images.length > 0) {
-                await addImageGrid(product.images, 3, 50, 40);
-                yPosition += 5;
-              }
-
-              addTextWithPageBreak(`${selectedProduct.name}`, 12, true);
-              addTextWithPageBreak(`Description: ${product.description || selectedProduct.description}`, 10);
-              addTextWithPageBreak(`Quantity: ${product.quantity}`, 10);
-              addTextWithPageBreak(`Unit Price: ${formatAmount(product.unitPrice)}`, 10);
-              addTextWithPageBreak(`Discount: ${product.discount}%`, 10);
-              const lineTotal = (product.quantity * product.unitPrice) * (1 - product.discount / 100);
-              addTextWithPageBreak(`Line Total: ${formatAmount(lineTotal)}`, 10, true);
-              yPosition += 8;
-            }
-          }
-        }
-        break;
-
-      case 'quotation_items':
-        if (section.data.groups && section.data.groups.length > 0) {
-          addTextWithPageBreak('Quotation Items:', 14, true);
-
-          // Iterate groups to render each section with its items
-          const sortedGroups = [...(section.data.groups || [])].sort((a: QuotationGroup, b: QuotationGroup) => (a.order || 0) - (b.order || 0));
-          for (const group of sortedGroups) {
-            if (yPosition + 10 > pageHeight - margin) {
+  // Helper: Add Image
+  const addImage = async (url: string, x: number, y: number, w: number, h: number) => {
+      try {
+          if (y + h > pageHeight - margin) {
               pdf.addPage();
               currentPage++;
-              yPosition = margin;
-              addPageBorder();
-            }
-
-            // Section header card
-            addSectionHeader(group.title.toUpperCase());
-            yPosition += 8;
-
-            const groupItems = (group.items || []) as QuotationItem[];
-            if (groupItems.length > 0) {
-              // Table header
-              const tableTop = yPosition;
-              pdf.setFontSize(10);
-              pdf.setFont('helvetica', 'bold');
-              pdf.text('Item', margin, yPosition);
-              pdf.text('Description', margin + 25, yPosition);
-              pdf.text('Qty', margin + 90, yPosition);
-              pdf.text('Rate', margin + 110, yPosition);
-              pdf.text('Amount', margin + 140, yPosition);
-              yPosition += 5;
-              pdf.line(margin, yPosition, pageWidth - margin, yPosition);
-              yPosition += 3;
-
-              // Table rows for group
-              pdf.setFont('helvetica', 'normal');
-              for (const [index, item] of groupItems.entries()) {
-                if (yPosition + 20 > pageHeight - margin) {
-                  pdf.addPage();
-                  currentPage++;
-                  yPosition = margin + 20;
-                  addPageBorder();
-                }
-
-                if (item.images && item.images.length > 0) {
-                  await addImageGrid(item.images, 4, 30, 25);
-                  yPosition += 5;
-                }
-
-                pdf.text((index + 1).toString(), margin, yPosition);
-                pdf.text(item.productName?.substring(0, 15) || '', margin + 10, yPosition);
-                pdf.text((item.description || '').substring(0, 20), margin + 25, yPosition);
-                pdf.text((item.quantity || 0).toString(), margin + 90, yPosition);
-                pdf.text(formatAmount(item.rate || 0), margin + 110, yPosition);
-                pdf.text(formatAmount(item.amount || 0), margin + 140, yPosition);
-                yPosition += 8;
-              }
-
-              yPosition += 10;
-            }
+              yPos = margin;
+              y = margin; // Update y for the new page
           }
+          pdf.addImage(url, 'JPEG', x, y, w, h);
+      } catch (e) {
+          console.error("Failed to add image", e);
+          pdf.rect(x, y, w, h); // Placeholder
+          pdf.setFontSize(8);
+          pdf.text("Image Error", x + 2, y + h/2);
+      }
+  };
 
-          // Summary
-          addTextWithPageBreak('Summary:', 12, true);
-          addTextWithPageBreak(`Subtotal: ${formatAmount(section.data.subtotal)}`, 11);
-          addTextWithPageBreak(`Discount: -${formatAmount(section.data.totalDiscount)}`, 11);
-          addTextWithPageBreak(`Tax: ${formatAmount(section.data.totalTax)}`, 11);
-          addTextWithPageBreak(`Grand Total: ${formatAmount(section.data.grandTotal)}`, 14, true);
-        }
-        break;
+  // Helper: Add Image Grid
+  const addImageGrid = async (images: string[], columns = 2, height = 50) => {
+      if (!images || images.length === 0) return;
+      
+      const gap = 5;
+      const totalWidth = pageWidth - (margin * 2);
+      const imgWidth = (totalWidth - ((columns - 1) * gap)) / columns;
+      
+      for (let i = 0; i < images.length; i++) {
+          const col = i % columns;
+          // If start of new row, check height
+          if (col === 0 && i > 0) {
+              yPos += height + gap;
+          }
+          
+          checkPageBreak(height + gap);
+          
+          const x = margin + (col * (imgWidth + gap));
+          await addImage(images[i], x, yPos, imgWidth, height);
+      }
+      yPos += height + 10; // Margin after grid
+  };
 
-      case 'timeline_schedule':
-        if (section.data.phases && section.data.phases.length > 0) {
-          addTextWithPageBreak('Project Timeline:', 12, true);
-          section.data.phases.forEach((phase: any, index: number) => {
-            addTextWithPageBreak(`${index + 1}. ${phase.name} (${phase.duration})`, 11, true);
-            if (phase.deliverables && phase.deliverables.length > 0) {
-              phase.deliverables.forEach((deliverable: string) => {
-                addTextWithPageBreak(`   • ${deliverable}`, 10);
-              });
-            }
-            yPosition += 5;
-          });
-        }
-        break;
+  // --- CONTENT GENERATION ---
 
-      case 'terms_warranties':
-        if (section.data.generalTerms) {
-          addTextWithPageBreak('Terms & Conditions:', 12, true);
-          addTextWithPageBreak(section.data.generalTerms, 10);
-        }
-        break;
+  const enabledSections = sections.filter(s => s.enabled);
+  const coverSection = sections.find(s => s.type === 'cover_page');
 
-      case 'contact_information':
-        if (section.data.companyContacts && section.data.companyContacts.length > 0) {
-          addTextWithPageBreak('Contact Information:', 12, true);
-          section.data.companyContacts.forEach((contact: any) => {
-            addTextWithPageBreak(`${contact.name} - ${contact.title}`, 11);
-            addTextWithPageBreak(`Phone: ${contact.phone} | Email: ${contact.email}`, 10);
-            yPosition += 5;
-          });
-        }
-        break;
-    }
-    yPosition += 15;
+  // 1. Cover Page
+  if (coverSection) {
+      // Logo
+      if (coverSection.data.companyLogo) {
+          await addImage(coverSection.data.companyLogo, margin, yPos, 40, 20);
+          yPos += 25;
+      } else {
+          yPos += 10;
+      }
+
+      // Company Info (Right Aligned)
+      pdf.setFontSize(24);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      pdf.text("QUOTATION", pageWidth - margin, 30, { align: 'right' });
+      
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(lightTextColor[0], lightTextColor[1], lightTextColor[2]);
+      pdf.text(`#${quotationData.quotationNumber}`, pageWidth - margin, 38, { align: 'right' });
+      
+      // Reset Y for content
+      yPos = 60;
+
+      // Client & Date Info Box
+      pdf.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
+      pdf.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
+      pdf.roundedRect(margin, yPos, pageWidth - (margin * 2), 40, 2, 2, 'F');
+      
+      // Left side: To
+      pdf.setFontSize(10);
+      pdf.setTextColor(lightTextColor[0], lightTextColor[1], lightTextColor[2]);
+      pdf.text("PREPARED FOR:", margin + 5, yPos + 8);
+      
+      pdf.setFontSize(11);
+      pdf.setTextColor(textColor[0], textColor[1], textColor[2]);
+      pdf.setFont('helvetica', 'bold');
+      if (customer) {
+          pdf.text(customer.companyName, margin + 5, yPos + 16);
+          pdf.setFont('helvetica', 'normal');
+          pdf.setFontSize(10);
+          pdf.text(customer.primaryContact.name, margin + 5, yPos + 22);
+          pdf.text(customer.primaryContact.email, margin + 5, yPos + 27);
+      } else {
+          pdf.text("Valued Customer", margin + 5, yPos + 16);
+      }
+
+      // Right side: Dates
+      const rightColX = pageWidth / 2 + 10;
+      pdf.setFontSize(10);
+      pdf.setTextColor(lightTextColor[0], lightTextColor[1], lightTextColor[2]);
+      pdf.text("DATE:", rightColX, yPos + 8);
+      pdf.text("VALID UNTIL:", rightColX, yPos + 22);
+
+      pdf.setTextColor(textColor[0], textColor[1], textColor[2]);
+      pdf.text(new Date(quotationData.issueDate).toLocaleDateString(), rightColX, yPos + 14);
+      pdf.text(new Date(quotationData.validUntil).toLocaleDateString(), rightColX, yPos + 28);
+
+      yPos += 50;
+
+      // Letter Content
+      if (coverSection.data.letterContent) {
+          addText("Dear Valued Client,", 11, true);
+          yPos += 5;
+          addText(coverSection.data.letterContent, 10);
+          yPos += 10;
+      }
+      
+      // Cover Images
+      if (coverSection.data.coverImages && coverSection.data.coverImages.length > 0) {
+          await addImageGrid(coverSection.data.coverImages, 2, 60);
+      }
   }
 
-  // Add page numbers
+  // 2. Other Sections
+  for (const section of enabledSections) {
+      if (section.type === 'cover_page') continue;
+
+      drawSectionTitle(section.title);
+
+      switch (section.type) {
+          case 'executive_summary':
+              if (section.data.summary) addText(section.data.summary);
+              if (section.data.keyBenefits?.length) {
+                  yPos += 5;
+                  addText("Key Benefits:", 11, true);
+                  section.data.keyBenefits.forEach((b: string) => addText(`• ${b}`, 10, false, textColor, 5));
+              }
+              break;
+
+          case 'company_introduction':
+              if (section.data.companyImages?.length) {
+                  await addImageGrid(section.data.companyImages, 3, 40);
+              }
+              if (section.data.description) addText(section.data.description);
+              if (section.data.achievements?.length) {
+                  yPos += 5;
+                  addText("Achievements:", 11, true);
+                  section.data.achievements.forEach((a: string) => addText(`• ${a}`, 10, false, textColor, 5));
+              }
+              break;
+
+          case 'problem_statement':
+              if (section.data.currentSituation) addText(section.data.currentSituation);
+              if (section.data.objectives?.length) {
+                  yPos += 5;
+                  addText("Objectives:", 11, true);
+                  section.data.objectives.forEach((o: string) => addText(`• ${o}`, 10, false, textColor, 5));
+              }
+              break;
+
+          case 'solution_details':
+              if (section.data.solutionImages?.length) {
+                  await addImageGrid(section.data.solutionImages, 2, 50);
+              }
+              if (section.data.solutionOverview) addText(section.data.solutionOverview);
+              if (section.data.keyFeatures?.length) {
+                  yPos += 5;
+                  addText("Key Features:", 11, true);
+                  section.data.keyFeatures.forEach((f: string) => addText(`• ${f}`, 10, false, textColor, 5));
+              }
+              break;
+
+          case 'quotation_items':
+              if (section.data.groups?.length) {
+                  const sortedGroups = [...(section.data.groups || [])].sort((a: QuotationGroup, b: QuotationGroup) => (a.order || 0) - (b.order || 0));
+                  
+                  for (const group of sortedGroups) {
+                      checkPageBreak(30);
+                      
+                      // Group Header
+                      pdf.setFont('helvetica', 'bold');
+                      pdf.setFontSize(11);
+                      pdf.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+                      pdf.text(group.title, margin, yPos);
+                      yPos += 5;
+
+                      // Table Header
+                      const colWidths = [10, 60, 20, 30, 20, 30]; // No, Desc, Qty, Rate, Disc, Amount
+                      const colX = [
+                          margin, 
+                          margin + colWidths[0], 
+                          margin + colWidths[0] + colWidths[1],
+                          margin + colWidths[0] + colWidths[1] + colWidths[2],
+                          margin + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3],
+                          margin + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4]
+                      ];
+
+                      pdf.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
+                      pdf.rect(margin, yPos, pageWidth - (margin * 2), 8, 'F');
+                      
+                      pdf.setFontSize(9);
+                      pdf.setTextColor(textColor[0], textColor[1], textColor[2]);
+                      pdf.text("#", colX[0] + 2, yPos + 5);
+                      pdf.text("Description", colX[1] + 2, yPos + 5);
+                      pdf.text("Qty", colX[2] + 2, yPos + 5);
+                      pdf.text("Rate", colX[3] + 2, yPos + 5);
+                      pdf.text("Disc %", colX[4] + 2, yPos + 5);
+                      pdf.text("Amount", colX[5] + 2, yPos + 5);
+                      
+                      yPos += 10;
+
+                      // Items
+                      const groupItems = (group.items || []) as QuotationItem[];
+                      pdf.setFont('helvetica', 'normal');
+                      
+                      for (const [idx, item] of groupItems.entries()) {
+                          checkPageBreak(15);
+                          
+                          // Striped row background
+                          if (idx % 2 === 1) {
+                              pdf.setFillColor(252, 252, 252);
+                              pdf.rect(margin, yPos - 4, pageWidth - (margin * 2), 10, 'F');
+                          }
+
+                          pdf.text((idx + 1).toString(), colX[0] + 2, yPos);
+                          
+                          // Truncate description if too long
+                          const desc = item.productName || item.description || '';
+                          const truncatedDesc = desc.length > 35 ? desc.substring(0, 32) + '...' : desc;
+                          pdf.text(truncatedDesc, colX[1] + 2, yPos);
+                          
+                          pdf.text(item.quantity.toString(), colX[2] + 2, yPos);
+                          pdf.text(formatAmount(item.rate), colX[3] + 2, yPos);
+                          pdf.text(item.discount ? `${item.discount}%` : '-', colX[4] + 2, yPos);
+                          pdf.text(formatAmount(item.amount), colX[5] + 2, yPos);
+                          
+                          yPos += 8;
+                          
+                          // Item Images
+                          if (item.images?.length) {
+                              await addImageGrid(item.images, 4, 20);
+                          }
+                      }
+                      yPos += 5;
+                  }
+
+                  // Totals Section
+                  checkPageBreak(40);
+                  const totalX = pageWidth - margin - 60;
+                  const valueX = pageWidth - margin - 5;
+                  
+                  yPos += 5;
+                  pdf.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
+                  pdf.line(totalX, yPos, pageWidth - margin, yPos);
+                  yPos += 5;
+
+                  const addTotalRow = (label: string, value: string, isBold = false) => {
+                      pdf.setFont('helvetica', isBold ? 'bold' : 'normal');
+                      pdf.setFontSize(isBold ? 11 : 10);
+                      pdf.text(label, totalX, yPos);
+                      pdf.text(value, valueX, yPos, { align: 'right' });
+                      yPos += 6;
+                  };
+
+                  addTotalRow("Subtotal:", formatAmount(section.data.subtotal));
+                  addTotalRow("Discount:", `-${formatAmount(section.data.totalDiscount)}`);
+                  addTotalRow("Tax:", formatAmount(section.data.totalTax));
+                  yPos += 2;
+                  pdf.setDrawColor(textColor[0], textColor[1], textColor[2]);
+                  pdf.line(totalX, yPos, pageWidth - margin, yPos);
+                  yPos += 5;
+                  addTotalRow("Grand Total:", formatAmount(section.data.grandTotal), true);
+              }
+              break;
+          
+          case 'timeline_schedule':
+              if (section.data.phases?.length) {
+                  section.data.phases.forEach((phase: any, i: number) => {
+                      checkPageBreak(20);
+                      addText(`${i + 1}. ${phase.name} (${phase.duration})`, 11, true);
+                      if (phase.deliverables?.length) {
+                          phase.deliverables.forEach((d: string) => addText(`• ${d}`, 10, false, textColor, 5));
+                      }
+                      yPos += 5;
+                  });
+              }
+              break;
+
+          case 'terms_warranties':
+              if (section.data.generalTerms) addText(section.data.generalTerms);
+              break;
+
+          case 'contact_information':
+              if (section.data.companyContacts?.length) {
+                  section.data.companyContacts.forEach((c: any) => {
+                      checkPageBreak(20);
+                      addText(`${c.name} - ${c.title}`, 11, true);
+                      addText(`Phone: ${c.phone} | Email: ${c.email}`, 10);
+                      yPos += 5;
+                  });
+              }
+              break;
+      }
+      yPos += 10; // Space between sections
+  }
+
+  // Add Page Numbers (Footer)
   const totalPages = (pdf as any).internal.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     pdf.setPage(i);
-    pdf.setFontSize(8);
-    pdf.setTextColor(128, 128, 128);
-    pdf.text(`Page ${i} of ${totalPages}`, pageWidth - margin - 20, pageHeight - 10);
-    pdf.text(`Generated on ${new Date().toLocaleDateString()}`, margin, pageHeight - 10);
+    drawFooter(i, totalPages);
   }
 
   return pdf;
