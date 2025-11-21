@@ -17,7 +17,7 @@ import { Edit, Trash2, Loader2, Plus, Search, Mail, Phone, X } from 'lucide-reac
 
 export default function SuppliersPage() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive' | 'blacklisted'>('all');
   const [selectedSupplier, setSelectedSupplier] = useState<Vendor | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
@@ -55,7 +55,7 @@ export default function SuppliersPage() {
     zipCode: '',
     paymentTerms: '',
     creditDays: 30,
-    status: 'active' as 'active' | 'inactive',
+  status: 'active' as 'active' | 'inactive' | 'blacklisted',
     productCategories: [] as string[],
     suppliedProducts: [] as string[],
     rating: 4.5,

@@ -94,7 +94,13 @@ export function subscribeEmployees(
  * Add a new employee to employeeList.
  * Returns new doc id.
  */
-export async function addEmployee(payload: Omit<Employee, 'id' | 'createdAt' | 'joinDate'> & { joinDate?: string }) {
+export type AddEmployeePayload =
+  Omit<Employee, 'id' | 'createdAt' | 'joinDate' | 'status'> & {
+    status?: Employee['status'];
+    joinDate?: string;
+  };
+
+export async function addEmployee(payload: AddEmployeePayload) {
   const col = collection(db, 'employeeList');
   const docRef = await addDoc(col, {
     name: payload.name,

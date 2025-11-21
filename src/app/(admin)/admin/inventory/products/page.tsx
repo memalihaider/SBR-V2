@@ -1341,6 +1341,12 @@ export default function AdminInventoryProductsPage() {
           reorderPoint: productForm.reorderPoint || 20,
           status: productForm.status || 'active',
           margin: 0, // Will be calculated in service
+          specifications: productForm.specifications || {},
+          images: productForm.images || [],
+          isSerialTracked: productForm.isSerialTracked || false,
+          isBatchTracked: productForm.isBatchTracked || false,
+          preferredVendor: productForm.preferredVendor || '',
+          alternateVendors: productForm.alternateVendors || [],
           createdAt: new Date(),
           updatedAt: new Date()
         };

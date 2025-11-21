@@ -1,3 +1,4 @@
+// new code
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
@@ -220,6 +221,7 @@ interface QuotationItem {
   tax: number;
   taxType: 'percentage' | 'fixed';
   serviceCharges: number;
+  groupId?: string; // used to group items under a QuotationGroup
   amount: number;
   images: string[];
 }
@@ -227,6 +229,14 @@ interface QuotationItem {
 interface QuotationTitle {
   id: string;
   title: string;
+}
+
+interface QuotationGroup {
+  id: string;
+  title: string;
+  description?: string;
+  order?: number;
+  items?: QuotationItem[];
 }
 
 // Template Definitions - 5 Different Templates
@@ -427,7 +437,7 @@ const ImageUploader = ({
   };
 
   const removeImage = (index: number) => {
-    const newImages = images.filter((_, i) => i !== index);
+    const newImages = images.filter((_: string, i: number) => i !== index);
     onImagesChange(newImages);
   };
 
@@ -566,6 +576,13 @@ const generatePDFWithImages = async (quotationData: any, sections: QuotationSect
   const enabledSections = sections.filter(s => s.enabled);
   const customer = customers.find(c => c.id === quotationData.customerId);
 
+  // Function to add blue border to each page
+  const addPageBorder = () => {
+    pdf.setDrawColor(59, 130, 246); // Blue color
+    pdf.setLineWidth(1.5);
+    pdf.rect(10, 10, pageWidth - 20, pageHeight - 20); // Page border
+  };
+
   // Function to add image to PDF
   const addImageToPDF = async (imageUrl: string, x: number, y: number, width: number, height: number): Promise<void> => {
     return new Promise((resolve, reject) => {
@@ -573,6 +590,7 @@ const generatePDFWithImages = async (quotationData: any, sections: QuotationSect
         pdf.addPage();
         currentPage++;
         yPosition = margin;
+        addPageBorder(); // Add border to new page
         resolve();
         return;
       }
@@ -609,6 +627,7 @@ const generatePDFWithImages = async (quotationData: any, sections: QuotationSect
         pdf.addPage();
         currentPage++;
         yPosition = margin;
+        addPageBorder(); // Add border to new page
         // Recalculate position for new page
         const newRow = Math.floor(i / maxPerRow);
         const newCol = i % maxPerRow;
@@ -634,6 +653,7 @@ const generatePDFWithImages = async (quotationData: any, sections: QuotationSect
         pdf.addPage();
         currentPage++;
         yPosition = margin;
+        addPageBorder(); // Add border to new page
       }
       pdf.text(lines[i], margin, yPosition);
       yPosition += lineHeight;
@@ -641,15 +661,17 @@ const generatePDFWithImages = async (quotationData: any, sections: QuotationSect
     yPosition += 2;
   };
 
+  // UPDATED: Section Header with Blue Background
   const addSectionHeader = (title: string) => {
     if (yPosition + 20 > pageHeight - margin) {
       pdf.addPage();
       currentPage++;
       yPosition = margin;
+      addPageBorder(); // Add border to new page
     }
     
-    // Section header with background
-    pdf.setFillColor(41, 128, 185);
+    // Section header with BLUE background
+    pdf.setFillColor(59, 130, 246); // Blue color
     pdf.rect(margin, yPosition, pageWidth - 2 * margin, 12, 'F');
     
     pdf.setTextColor(255, 255, 255);
@@ -660,6 +682,9 @@ const generatePDFWithImages = async (quotationData: any, sections: QuotationSect
     yPosition += 15;
     pdf.setTextColor(0, 0, 0);
   };
+
+  // Add border to first page
+  addPageBorder();
 
   // Cover Page
   addSectionHeader('QUOTATION PROPOSAL');
@@ -710,7 +735,7 @@ const generatePDFWithImages = async (quotationData: any, sections: QuotationSect
     yPosition += 15;
   }
 
-  // Process all enabled sections
+  // Process all enabled sections in SEQUENCE
   for (const section of enabledSections) {
     if (section.type === 'cover_page') continue;
     
@@ -718,6 +743,7 @@ const generatePDFWithImages = async (quotationData: any, sections: QuotationSect
       pdf.addPage();
       currentPage++;
       yPosition = margin;
+      addPageBorder(); // Add border to new page
     }
 
     addSectionHeader(section.title.toUpperCase());
@@ -814,61 +840,65 @@ const generatePDFWithImages = async (quotationData: any, sections: QuotationSect
         break;
 
       case 'quotation_items':
-        if (section.data.items && section.data.items.length > 0) {
+        if (section.data.groups && section.data.groups.length > 0) {
           addTextWithPageBreak('Quotation Items:', 14, true);
-          
-          // Section titles
-          if (section.data.titles && section.data.titles.length > 0) {
-            section.data.titles.forEach((title: QuotationTitle) => {
-              if (yPosition + 10 > pageHeight - margin) {
-                pdf.addPage();
-                currentPage++;
-                yPosition = margin;
-              }
-              addTextWithPageBreak(title.title, 12, true, 8);
-              yPosition += 5;
-            });
-            yPosition += 5;
-          }
-          
-          // Table header
-          const tableTop = yPosition;
-          pdf.setFontSize(10);
-          pdf.setFont('helvetica', 'bold');
-          pdf.text('Item', margin, yPosition);
-          pdf.text('Description', margin + 25, yPosition);
-          pdf.text('Qty', margin + 90, yPosition);
-          pdf.text('Rate', margin + 110, yPosition);
-          pdf.text('Amount', margin + 140, yPosition);
-          yPosition += 5;
-          pdf.line(margin, yPosition, pageWidth - margin, yPosition);
-          yPosition += 3;
 
-          // Table rows
-          pdf.setFont('helvetica', 'normal');
-          for (const [index, item] of section.data.items.entries()) {
-            if (yPosition + 20 > pageHeight - margin) {
+          // Iterate groups to render each section with its items
+          const sortedGroups = [...(section.data.groups || [])].sort((a: QuotationGroup, b: QuotationGroup) => (a.order || 0) - (b.order || 0));
+          for (const group of sortedGroups) {
+            if (yPosition + 10 > pageHeight - margin) {
               pdf.addPage();
               currentPage++;
-              yPosition = margin + 20;
+              yPosition = margin;
+              addPageBorder();
             }
-            
-            // Add product images for each item if available
-            if (item.images && item.images.length > 0) {
-              await addImageGrid(item.images, 4, 30, 25);
-              yPosition += 5;
-            }
-            
-            pdf.text((index + 1).toString(), margin, yPosition);
-            pdf.text(item.productName.substring(0, 15), margin + 10, yPosition);
-            pdf.text(item.description.substring(0, 20), margin + 25, yPosition);
-            pdf.text(item.quantity.toString(), margin + 90, yPosition);
-            pdf.text(formatAmount(item.rate), margin + 110, yPosition);
-            pdf.text(formatAmount(item.amount), margin + 140, yPosition);
-            yPosition += 8;
-          }
 
-          yPosition += 10;
+            // Section header card
+            addSectionHeader(group.title.toUpperCase());
+            yPosition += 8;
+
+            const groupItems = (group.items || []) as QuotationItem[];
+            if (groupItems.length > 0) {
+              // Table header
+              const tableTop = yPosition;
+              pdf.setFontSize(10);
+              pdf.setFont('helvetica', 'bold');
+              pdf.text('Item', margin, yPosition);
+              pdf.text('Description', margin + 25, yPosition);
+              pdf.text('Qty', margin + 90, yPosition);
+              pdf.text('Rate', margin + 110, yPosition);
+              pdf.text('Amount', margin + 140, yPosition);
+              yPosition += 5;
+              pdf.line(margin, yPosition, pageWidth - margin, yPosition);
+              yPosition += 3;
+
+              // Table rows for group
+              pdf.setFont('helvetica', 'normal');
+              for (const [index, item] of groupItems.entries()) {
+                if (yPosition + 20 > pageHeight - margin) {
+                  pdf.addPage();
+                  currentPage++;
+                  yPosition = margin + 20;
+                  addPageBorder();
+                }
+
+                if (item.images && item.images.length > 0) {
+                  await addImageGrid(item.images, 4, 30, 25);
+                  yPosition += 5;
+                }
+
+                pdf.text((index + 1).toString(), margin, yPosition);
+                pdf.text(item.productName?.substring(0, 15) || '', margin + 10, yPosition);
+                pdf.text((item.description || '').substring(0, 20), margin + 25, yPosition);
+                pdf.text((item.quantity || 0).toString(), margin + 90, yPosition);
+                pdf.text(formatAmount(item.rate || 0), margin + 110, yPosition);
+                pdf.text(formatAmount(item.amount || 0), margin + 140, yPosition);
+                yPosition += 8;
+              }
+
+              yPosition += 10;
+            }
+          }
 
           // Summary
           addTextWithPageBreak('Summary:', 12, true);
@@ -912,12 +942,11 @@ const generatePDFWithImages = async (quotationData: any, sections: QuotationSect
         }
         break;
     }
-
     yPosition += 15;
   }
 
   // Add page numbers
-  const totalPages = pdf.internal.getNumberOfPages();
+  const totalPages = (pdf as any).internal.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     pdf.setPage(i);
     pdf.setFontSize(8);
@@ -1164,8 +1193,8 @@ export default function NewQuotationPage() {
       enabled: true,
       order: 7,
       data: {
+        groups: [] as QuotationGroup[],
         items: [] as QuotationItem[],
-        titles: [] as QuotationTitle[],
         subtotal: 0,
         totalDiscount: 0,
         totalTax: 0,
@@ -1518,18 +1547,21 @@ export default function NewQuotationPage() {
     let totalDiscount = 0;
     let totalTax = 0;
 
-    quotationSection.data.items.forEach((item: QuotationItem) => {
-      const itemSubtotal = item.quantity * item.rate;
-      const itemDiscount = item.discountType === 'percentage'
-        ? itemSubtotal * (item.discount / 100)
-        : item.discount;
-      const itemTax = item.taxType === 'percentage'
-        ? (itemSubtotal - itemDiscount) * (item.tax / 100)
-        : item.tax;
+    // Iterate through all groups and their items
+    (quotationSection.data.groups || []).forEach((group: QuotationGroup) => {
+      (group.items || []).forEach((item: QuotationItem) => {
+        const itemSubtotal = item.quantity * item.rate;
+        const itemDiscount = item.discountType === 'percentage'
+          ? itemSubtotal * (item.discount / 100)
+          : item.discount;
+        const itemTax = item.taxType === 'percentage'
+          ? (itemSubtotal - itemDiscount) * (item.tax / 100)
+          : item.tax;
 
-      subtotal += itemSubtotal;
-      totalDiscount += itemDiscount;
-      totalTax += itemTax;
+        subtotal += itemSubtotal;
+        totalDiscount += itemDiscount;
+        totalTax += itemTax;
+      });
     });
 
     const grandTotal = subtotal - totalDiscount + totalTax + quotationSection.data.serviceCharges;
@@ -1622,46 +1654,63 @@ export default function NewQuotationPage() {
   const addQuotationTitle = () => {
     const quotationSection = sections.find(s => s.type === 'quotation_items');
     if (quotationSection) {
-      const newTitle: QuotationTitle = {
-        id: `title_${Date.now()}`,
-        title: ''
+      const newGroup: QuotationGroup = {
+        id: `group_${Date.now()}`,
+        title: '',
+        description: '',
+        order: (quotationSection.data.groups || []).length,
+        items: []
       };
 
       updateSectionData('quotation_items', {
-        titles: [...quotationSection.data.titles, newTitle]
+        ...quotationSection.data,
+        groups: [...(quotationSection.data.groups || []), newGroup]
       });
     }
   };
 
-  const removeQuotationTitle = (titleId: string) => {
+  const removeQuotationTitle = (groupId: string) => {
     const quotationSection = sections.find(s => s.type === 'quotation_items');
     if (quotationSection) {
       updateSectionData('quotation_items', {
-        titles: quotationSection.data.titles.filter((t: QuotationTitle) => t.id !== titleId)
+        ...quotationSection.data,
+        groups: (quotationSection.data.groups || []).filter((g: QuotationGroup) => g.id !== groupId)
       });
     }
   };
 
-  const updateQuotationTitle = (titleId: string, data: Partial<QuotationTitle>) => {
+  const updateQuotationTitle = (groupId: string, data: Partial<QuotationGroup>) => {
     const quotationSection = sections.find(s => s.type === 'quotation_items');
     if (quotationSection) {
       updateSectionData('quotation_items', {
-        titles: quotationSection.data.titles.map((t: QuotationTitle) =>
-          t.id === titleId ? { ...t, ...data } : t
+        ...quotationSection.data,
+        groups: (quotationSection.data.groups || []).map((g: QuotationGroup) =>
+          g.id === groupId ? { ...g, ...data } : g
         )
       });
     }
   };
+const addQuotationItem = (groupId: string) => {
+  const quotationSection = sections.find(s => s.type === 'quotation_items');
 
-  const addQuotationItem = () => {
-    const quotationSection = sections.find(s => s.type === 'quotation_items');
-    if (quotationSection) {
+  if (quotationSection && quotationSection.data.groups) {
+    const groupIndex = quotationSection.data.groups.findIndex((g: QuotationGroup) => g.id === groupId);
+    
+    if (groupIndex >= 0) {
+      const group = quotationSection.data.groups[groupIndex];
+      const groupItems = group.items || [];
+      const titleItems = groupItems;
+
       const newItem: QuotationItem = {
         id: `item_${Date.now()}`,
-        itemId: `Q${(quotationSection.data.items.length + 1).toString().padStart(3, '0')}`,
+        groupId: groupId,  // <<< VERY IMPORTANT (link to group)
+
+        itemId: `Q${(titleItems.length + 1).toString().padStart(3, '0')}`,
+
         productId: '',
         productName: '',
         description: '',
+
         quantity: 1,
         rate: 0,
         discount: 0,
@@ -1670,20 +1719,37 @@ export default function NewQuotationPage() {
         taxType: 'percentage',
         serviceCharges: 0,
         amount: 0,
+
         images: []
       };
 
+      const newGroups = quotationSection.data.groups.map((g: QuotationGroup, idx: number) => 
+        idx === groupIndex 
+          ? { ...g, items: [...(g.items || []), newItem] }
+          : g
+      );
+
       updateSectionData('quotation_items', {
-        items: [...quotationSection.data.items, newItem]
+        ...quotationSection.data,
+        groups: newGroups
       });
     }
-  };
+  }
+};
+
+
 
   const removeQuotationItem = (itemId: string) => {
     const quotationSection = sections.find(s => s.type === 'quotation_items');
     if (quotationSection) {
+      const updatedGroups = (quotationSection.data.groups || []).map((group: QuotationGroup) => ({
+        ...group,
+        items: (group.items || []).filter((item: QuotationItem) => item.id !== itemId)
+      }));
+
       updateSectionData('quotation_items', {
-        items: quotationSection.data.items.filter((item: QuotationItem) => item.id !== itemId)
+        ...quotationSection.data,
+        groups: updatedGroups
       });
     }
   };
@@ -1691,26 +1757,30 @@ export default function NewQuotationPage() {
   const updateQuotationItem = (itemId: string, data: Partial<QuotationItem>) => {
     const quotationSection = sections.find(s => s.type === 'quotation_items');
     if (quotationSection) {
-      const updatedItems = quotationSection.data.items.map((item: QuotationItem) => {
-        if (item.id === itemId) {
-          const updatedItem = { ...item, ...data };
-          
-          const subtotal = updatedItem.quantity * updatedItem.rate;
-          const discountAmount = updatedItem.discountType === 'percentage'
-            ? subtotal * (updatedItem.discount / 100)
-            : updatedItem.discount;
-          const taxableAmount = subtotal - discountAmount;
-          const taxAmount = updatedItem.taxType === 'percentage'
-            ? taxableAmount * (updatedItem.tax / 100)
-            : updatedItem.tax;
-          updatedItem.amount = taxableAmount + taxAmount + updatedItem.serviceCharges;
-          
-          return updatedItem;
-        }
-        return item;
+      const updatedGroups = (quotationSection.data.groups || []).map((group: QuotationGroup) => {
+        const updatedItems = (group.items || []).map((item: QuotationItem) => {
+          if (item.id === itemId) {
+            const updatedItem = { ...item, ...data };
+            
+            const subtotal = updatedItem.quantity * updatedItem.rate;
+            const discountAmount = updatedItem.discountType === 'percentage'
+              ? subtotal * (updatedItem.discount / 100)
+              : updatedItem.discount;
+            const taxableAmount = subtotal - discountAmount;
+            const taxAmount = updatedItem.taxType === 'percentage'
+              ? taxableAmount * (updatedItem.tax / 100)
+              : updatedItem.tax;
+            updatedItem.amount = taxableAmount + taxAmount + updatedItem.serviceCharges;
+            
+            return updatedItem;
+          }
+          return item;
+        });
+
+        return { ...group, items: updatedItems };
       });
 
-      updateSectionData('quotation_items', { items: updatedItems });
+      updateSectionData('quotation_items', { ...quotationSection.data, groups: updatedGroups });
     }
   };
 
@@ -2117,7 +2187,7 @@ export default function NewQuotationPage() {
         <div className="space-y-3">
           {section.data.keyBenefits.map((benefit: string, index: number) => (
             <div key={index} className="flex items-center gap-3 group">
-              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-green-100 text-green-700 text-sm font-medium flex-shrink-0">
+              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-green-100 text-green-700 text-sm font-medium shrink-0">
                 {index + 1}
               </div>
               <Input
@@ -2136,10 +2206,10 @@ export default function NewQuotationPage() {
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    const newBenefits = section.data.keyBenefits.filter((_, i) => i !== index);
+                    const newBenefits = section.data.keyBenefits.filter((_: string, i: number) => i !== index);
                     updateSectionData(section.id, { keyBenefits: newBenefits });
                   }}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                 >
                   <Trash2 className="h-4 w-4 text-red-500" />
                 </Button>
@@ -2285,7 +2355,7 @@ export default function NewQuotationPage() {
         <div className="space-y-3">
           {section.data.achievements.map((achievement: string, index: number) => (
             <div key={index} className="flex items-center gap-3 group">
-              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-sm font-medium flex-shrink-0">
+              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-sm font-medium shrink-0">
                 {index + 1}
               </div>
               <Input
@@ -2304,10 +2374,10 @@ export default function NewQuotationPage() {
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    const newAchievements = section.data.achievements.filter((_, i) => i !== index);
+                    const newAchievements = section.data.achievements.filter((_: string, i: number) => i !== index);
                     updateSectionData(section.id, { achievements: newAchievements });
                   }}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                 >
                   <Trash2 className="h-4 w-4 text-red-500" />
                 </Button>
@@ -2355,7 +2425,7 @@ export default function NewQuotationPage() {
         <div className="space-y-3">
           {section.data.clientChallenges.map((challenge: string, index: number) => (
             <div key={index} className="flex items-center gap-3 group">
-              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-red-100 text-red-700 text-sm font-medium flex-shrink-0">
+              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-red-100 text-red-700 text-sm font-medium shrink-0">
                 {index + 1}
               </div>
               <Input
@@ -2374,10 +2444,10 @@ export default function NewQuotationPage() {
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    const newChallenges = section.data.clientChallenges.filter((_, i) => i !== index);
+                    const newChallenges = section.data.clientChallenges.filter((_: string, i: number) => i !== index);
                     updateSectionData(section.id, { clientChallenges: newChallenges });
                   }}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                 >
                   <Trash2 className="h-4 w-4 text-red-500" />
                 </Button>
@@ -2441,7 +2511,7 @@ export default function NewQuotationPage() {
         <div className="space-y-3">
           {section.data.objectives.map((objective: string, index: number) => (
             <div key={index} className="flex items-center gap-3 group">
-              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-green-100 text-green-700 text-sm font-medium flex-shrink-0">
+              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-green-100 text-green-700 text-sm font-medium shrink-0">
                 {index + 1}
               </div>
               <Input
@@ -2460,10 +2530,10 @@ export default function NewQuotationPage() {
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    const newObjectives = section.data.objectives.filter((_, i) => i !== index);
+                    const newObjectives = section.data.objectives.filter((_: string, i: number) => i !== index);
                     updateSectionData(section.id, { objectives: newObjectives });
                   }}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                 >
                   <Trash2 className="h-4 w-4 text-red-500" />
                 </Button>
@@ -2541,7 +2611,7 @@ export default function NewQuotationPage() {
         <div className="space-y-3">
           {section.data.keyFeatures.map((feature: string, index: number) => (
             <div key={index} className="flex items-center gap-3 group">
-              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-sm font-medium flex-shrink-0">
+              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-sm font-medium shrink-0">
                 {index + 1}
               </div>
               <Input
@@ -2560,10 +2630,10 @@ export default function NewQuotationPage() {
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    const newFeatures = section.data.keyFeatures.filter((_, i) => i !== index);
+                    const newFeatures = section.data.keyFeatures.filter((_: string, i: number) => i !== index);
                     updateSectionData(section.id, { keyFeatures: newFeatures });
                   }}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                 >
                   <Trash2 className="h-4 w-4 text-red-500" />
                 </Button>
@@ -2618,7 +2688,7 @@ export default function NewQuotationPage() {
         <div className="space-y-3">
           {section.data.benefits.map((benefit: string, index: number) => (
             <div key={index} className="flex items-center gap-3 group">
-              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-green-100 text-green-700 text-sm font-medium flex-shrink-0">
+              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-green-100 text-green-700 text-sm font-medium shrink-0">
                 {index + 1}
               </div>
               <Input
@@ -2637,10 +2707,10 @@ export default function NewQuotationPage() {
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    const newBenefits = section.data.benefits.filter((_, i) => i !== index);
+                    const newBenefits = section.data.benefits.filter((_: string, i: number) => i !== index);
                     updateSectionData(section.id, { benefits: newBenefits });
                   }}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                 >
                   <Trash2 className="h-4 w-4 text-red-500" />
                 </Button>
@@ -2893,207 +2963,231 @@ export default function NewQuotationPage() {
     </div>
   );
 
-  const renderQuotationItems = (section: QuotationSection) => (
-    <div className="space-y-6">
-      <div className="space-y-4">
+ const renderQuotationItems = (section: QuotationSection) => (
+  <div className="space-y-8">
+
+    {/* ================= GROUPS + ITEMS ================= */}
+
+    {(section.data.groups || []).map((group: QuotationGroup, groupIndex: number) => (
+      <div key={group.id} className="border rounded-xl p-5 bg-gray-50 space-y-5">
+
+        {/* ===== Group Header ===== */}
         <div className="flex justify-between items-center">
-          <h4 className="font-semibold text-lg">Section Titles</h4>
-          <Button onClick={addQuotationTitle} size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Title
+          <div className="flex items-center gap-3">
+            <div className="w-7 h-7 flex items-center justify-center rounded-full bg-blue-200 text-blue-800 font-semibold">
+              {groupIndex + 1}
+            </div>
+
+            <Input
+              value={group.title}
+              onChange={(e) =>
+                updateQuotationTitle(group.id, { title: e.target.value })
+              }
+              placeholder={`Enter Group Title ${groupIndex + 1}...`}
+              className="font-medium"
+            />
+          </div>
+
+          <Button
+            onClick={() => removeQuotationTitle(group.id)}
+            variant="destructive"
+            size="sm"
+            title="Delete this group and all its items"
+            className="gap-2"
+          >
+            <Trash2 className="h-4 w-4" />
+            <span className="hidden sm:inline">Delete Group</span>
           </Button>
         </div>
 
-        <div className="space-y-3">
-          {section.data.titles.map((title: QuotationTitle, index: number) => (
-            <div key={title.id} className="flex items-center gap-3 p-3 border rounded-lg">
-              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-sm font-medium flex-shrink-0">
-                {index + 1}
+        {/* ===== Add Item Button (Inside Group) ===== */}
+        <div className="flex justify-end">
+          <Button
+            size="sm"
+            onClick={() => addQuotationItem(group.id)} // <<< IMPORTANT - now uses groupId
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Add Item
+          </Button>
+        </div>
+
+        {/* ===== Render Items Under This Group ===== */}
+        <div className="space-y-4">
+          {(group.items || []).map((item: QuotationItem, index: number) => (
+            <Card key={item.id} className="p-4 border shadow-sm">
+
+              <div className="flex justify-between items-start mb-4">
+                <h5 className="font-medium">
+                  Item {index + 1}: {item.productName || "New Item"}
+                </h5>
+
+                <Button
+                  onClick={() => removeQuotationItem(item.id)}
+                  variant="destructive"
+                  size="sm"
+                  title="Delete this item"
+                  className="gap-2"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span className="hidden sm:inline">Delete</span>
+                </Button>
               </div>
-              <Input
-                value={title.title}
-                onChange={(e) => updateQuotationTitle(title.id, { title: e.target.value })}
-                placeholder={`Enter title ${index + 1}...`}
-                className="flex-1"
-              />
-              <Button
-                onClick={() => removeQuotationTitle(title.id)}
-                variant="destructive"
-                size="sm"
-                className="flex-shrink-0"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div className="space-y-2">
+                  <Label>Item ID</Label>
+                  <Input
+                    value={item.itemId}
+                    onChange={(e) =>
+                      updateQuotationItem(item.id, { itemId: e.target.value })
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Product</Label>
+                  <Select
+                    value={item.productId}
+                    onValueChange={(value) => {
+                      const product = products.find((p) => p.id === value);
+                      if (product) {
+                        updateQuotationItem(item.id, {
+                          productId: value,
+                          productName: product.name,
+                          description: product.description,
+                          rate: product.sellingPrice,
+                          images: product.images || [],
+                        });
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Product" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {products.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name} - {formatAmount(p.sellingPrice)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2 mb-4">
+                <Label>Product Images</Label>
+                <ImageUploader
+                  images={item.images || []}
+                  onImagesChange={(images) =>
+                    updateQuotationItem(item.id, { images })
+                  }
+                  multiple
+                  maxImages={5}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                <div className="space-y-2">
+                  <Label>Quantity</Label>
+                  <Input
+                    type="number"
+                    value={item.quantity}
+                    onChange={(e) =>
+                      updateQuotationItem(item.id, { quantity: +e.target.value })
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Rate</Label>
+                  <Input
+                    type="number"
+                    value={item.rate}
+                    onChange={(e) =>
+                      updateQuotationItem(item.id, { rate: +e.target.value })
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Tax (%)</Label>
+                  <Input
+                    type="number"
+                    value={item.tax}
+                    onChange={(e) =>
+                      updateQuotationItem(item.id, { tax: +e.target.value })
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Amount</Label>
+                  <Input
+                    value={formatAmount(item.amount)}
+                    readOnly
+                    className="bg-gray-100"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <Textarea
+                  value={item.description}
+                  onChange={(e) =>
+                    updateQuotationItem(item.id, { description: e.target.value })
+                  }
+                />
+              </div>
+            </Card>
           ))}
         </div>
       </div>
+    ))}
 
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <h4 className="font-semibold text-lg">Quotation Items</h4>
-          <Button onClick={addQuotationItem} size="sm" disabled={productsLoading}>
-            <Plus className="h-4 w-4 mr-2" />
-            {productsLoading ? 'Loading Products...' : 'Add Item'}
-          </Button>
+    {/* ================= ADD NEW GROUP ================= */}
+    <div className="flex justify-end">
+      <Button onClick={addQuotationTitle}>
+        <Plus className="h-4 w-4 mr-2" />
+        Add Group
+      </Button>
+    </div>
+
+    {/* ================= SUMMARY ================= */}
+    <div className="space-y-4">
+      <h4 className="font-semibold text-lg">Summary</h4>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
+        <div className="text-center">
+          <p className="text-sm text-gray-600">Subtotal</p>
+          <p className="text-lg font-bold">{formatAmount(section.data.subtotal)}</p>
         </div>
 
-        {productsLoading && (
-          <div className="flex items-center justify-center p-8">
-            <Loader2 className="h-6 w-6 animate-spin mr-2" />
-            <span>Loading products...</span>
-          </div>
-        )}
+        <div className="text-center">
+          <p className="text-sm text-gray-600">Discount</p>
+          <p className="text-lg font-bold text-green-600">
+            -{formatAmount(section.data.totalDiscount)}
+          </p>
+        </div>
 
-        {section.data.items.map((item: QuotationItem, index: number) => (
-          <Card key={item.id} className="p-4 mb-4">
-            <div className="flex justify-between items-start mb-4">
-              <h5 className="font-medium">Item {index + 1}: {item.productName || 'New Item'}</h5>
-              <Button
-                onClick={() => removeQuotationItem(item.id)}
-                variant="destructive"
-                size="sm"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
+        <div className="text-center">
+          <p className="text-sm text-gray-600">Tax</p>
+          <p className="text-lg font-bold text-blue-600">
+            +{formatAmount(section.data.totalTax)}
+          </p>
+        </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div className="space-y-2">
-                <Label>Item ID</Label>
-                <Input
-                  value={item.itemId}
-                  onChange={(e) => updateQuotationItem(item.id, { itemId: e.target.value })}
-                  placeholder="001"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Product</Label>
-                <Select
-                  value={item.productId}
-                  onValueChange={(value) => {
-                    const product = products.find(p => p.id === value);
-                    if (product) {
-                      updateQuotationItem(item.id, {
-                        productId: value,
-                        productName: product.name,
-                        description: product.description,
-                        rate: product.sellingPrice,
-                        images: product.images || []
-                      });
-                    }
-                  }}
-                  disabled={productsLoading}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={productsLoading ? "Loading..." : "Select product"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {products.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.name} - {formatAmount(p.sellingPrice)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-2 mb-4">
-              <Label>Product Images</Label>
-              <ImageUploader
-                images={item.images || []}
-                onImagesChange={(images) => updateQuotationItem(item.id, { images })}
-                multiple={true}
-                maxImages={5}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-              <div className="space-y-2">
-                <Label>Quantity</Label>
-                <Input
-                  type="number"
-                  value={item.quantity}
-                  onChange={(e) => {
-                    updateQuotationItem(item.id, { quantity: parseFloat(e.target.value) || 0 });
-                  }}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Rate</Label>
-                <Input
-                  type="number"
-                  value={item.rate}
-                  onChange={(e) => {
-                    updateQuotationItem(item.id, { rate: parseFloat(e.target.value) || 0 });
-                  }}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Tax (%)</Label>
-                <Input
-                  type="number"
-                  value={item.tax}
-                  onChange={(e) => {
-                    updateQuotationItem(item.id, { tax: parseFloat(e.target.value) || 0 });
-                  }}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Amount</Label>
-                <Input
-                  value={formatAmount(item.amount)}
-                  readOnly
-                  className="bg-gray-50 font-medium"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <Textarea
-                value={item.description}
-                onChange={(e) => updateQuotationItem(item.id, { description: e.target.value })}
-                rows={3}
-                placeholder="Enter product description..."
-              />
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      <div className="space-y-4">
-        <h4 className="font-semibold text-lg">Summary</h4>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
-          <div className="text-center">
-            <p className="text-sm text-gray-600">Subtotal</p>
-            <p className="text-lg font-bold text-gray-900">
-              {formatAmount(section.data.subtotal)}
-            </p>
-          </div>
-          <div className="text-center">
-            <p className="text-sm text-gray-600">Discount</p>
-            <p className="text-lg font-bold text-green-600">
-              -{formatAmount(section.data.totalDiscount)}
-            </p>
-          </div>
-          <div className="text-center">
-            <p className="text-sm text-gray-600">Tax</p>
-            <p className="text-lg font-bold text-blue-600">
-              +{formatAmount(section.data.totalTax)}
-            </p>
-          </div>
-          <div className="text-center">
-            <p className="text-sm text-gray-600">Grand Total</p>
-            <p className="text-2xl font-bold text-red-600">
-              {formatAmount(section.data.grandTotal)}
-            </p>
-          </div>
+        <div className="text-center">
+          <p className="text-sm text-gray-600">Grand Total</p>
+          <p className="text-2xl font-bold text-red-600">
+            {formatAmount(section.data.grandTotal)}
+          </p>
         </div>
       </div>
     </div>
-  );
+  </div>
+);
+
 
   const renderTimelineSchedule = (section: QuotationSection) => (
     <div className="space-y-6">
@@ -3667,7 +3761,7 @@ export default function NewQuotationPage() {
         <div className="space-y-3">
           {section.data.nextSteps.map((step: string, index: number) => (
             <div key={index} className="flex items-center gap-3 group">
-              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-sm font-medium flex-shrink-0">
+              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-sm font-medium shrink-0">
                 {index + 1}
               </div>
               <Input
@@ -3686,10 +3780,10 @@ export default function NewQuotationPage() {
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    const newSteps = section.data.nextSteps.filter((_, i) => i !== index);
+                    const newSteps = section.data.nextSteps.filter((_: string, i: number) => i !== index);
                     updateSectionData(section.id, { nextSteps: newSteps });
                   }}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                 >
                   <Trash2 className="h-4 w-4 text-red-500" />
                 </Button>
@@ -3829,7 +3923,7 @@ export default function NewQuotationPage() {
               )}
             </Button>
 
-            <Button 
+            {/* <Button 
               className="bg-green-600 hover:bg-green-700 text-white"
               onClick={sendQuotation}
               disabled={loadingStates.sendQuotation || customersLoading}
@@ -3845,7 +3939,7 @@ export default function NewQuotationPage() {
                   Send Quotation
                 </>
               )}
-            </Button>
+            </Button> */}
           </div>
         </div>
       </div>
@@ -4034,15 +4128,16 @@ export default function NewQuotationPage() {
           Save Quotation
         </Button>
         
-        <Button 
+        {/* <Button 
           className="bg-green-600 hover:bg-green-700"
           onClick={sendQuotation}
           disabled={loadingStates.sendQuotation}
         >
           {loadingStates.sendQuotation ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
           Send Quotation
-        </Button>
+        </Button> */}
       </div>
     </div>
   );
 }
+

@@ -171,7 +171,7 @@ export default function ProjectTasksPage() {
     };
 
     try {
-      await updateDoc(doc(db, 'tasks', selectedTask.id), updatedTask);
+      await updateDoc(doc(db, 'tasks', selectedTask.id), updatedTask as any);
       setTasks(prev => prev.map(task => 
         task.id === selectedTask.id ? { ...updatedTask, id: selectedTask.id } : task
       ));
@@ -286,7 +286,7 @@ export default function ProjectTasksPage() {
     };
 
     try {
-      await updateDoc(doc(db, 'tasks', selectedTask.id), updatedTask);
+  await updateDoc(doc(db, 'tasks', selectedTask.id), updatedTask as any);
       setTasks(prev => prev.map(task => 
         task.id === selectedTask.id ? { ...updatedTask, id: selectedTask.id } : task
       ));

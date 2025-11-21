@@ -58,13 +58,7 @@
 // import { useCurrency } from "@/lib/currency";
 // import { Customer, CustomerType } from "@/types";
 
-// // Firestore helpers
-// import {
-//   addCustomerToFirestore,
-//   updateCustomerInFirestore,
-//   deleteCustomerFromFirestore,
-//   subscribeToCustomers,
-// } from "@/lib/customer";
+// (Imports are included later in file near other imports)
 
 // // Firebase imports for projects
 // import { 
@@ -1419,6 +1413,7 @@ function CustomerFormDialog({
         name: "",
         email: "",
         phone: "",
+        designation: "",
       },
       address: {
         street: "",
@@ -1454,6 +1449,7 @@ function CustomerFormDialog({
           name: "",
           email: "",
           phone: "",
+          designation: "",
         },
         address: {
           street: "",

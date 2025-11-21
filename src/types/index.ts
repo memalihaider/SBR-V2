@@ -118,6 +118,9 @@ export interface Customer {
     phone: string;
     designation: string;
   };
+
+  // Additional phone numbers (flexible structure)
+  phoneNumbers?: Array<{ type: string; number: string }>;
   
   // Address
   address: {
@@ -205,6 +208,8 @@ export interface Product {
   costPrice: number;
   sellingPrice: number;
   margin: number;
+  serviceCharges?: number; // Additional per-product service charge default 0
+  shippingCharges?: number; // Additional per-product shipping charge default 0
 
   // Inventory
   currentStock: number;
@@ -214,6 +219,7 @@ export interface Product {
 
   // Specifications
   specifications: Record<string, string>;
+  orderSpecification?: string;
   images: string[];
   datasheet?: string;
 
@@ -408,6 +414,7 @@ export interface Vendor {
   
   // Categories
   productCategories: string[]; // Now array of strings for hierarchical categories
+  suppliedProducts?: string[]; // list of product IDs the vendor supplies
   
   status: VendorStatus;
   isActive: boolean;
@@ -713,7 +720,8 @@ export type QuotationStatus =
   | 'under_review'
   | 'approved'
   | 'rejected'
-  | 'expired';
+  | 'expired'
+  | 'converted';
 
 export interface Quotation {
   id: string;

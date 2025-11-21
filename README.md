@@ -240,12 +240,3 @@ For questions or issues, please check the code documentation or open an issue.
 ---
 
 **Built with Next.js 16** | **TypeScript** | **Tailwind CSS** | **Shadcn/ui**
-
-## Admin sidebar active style
-
-The admin portal sidebar highlights the active page with a red theme and a stronger hover/active effect to make the current page more visible.
-
-- Location: `src/app/(admin)/layout.tsx`
-- Implementation: `activeLinkClass` constant controls the active link styles (default uses `bg-red-600` + hover/ring/active scale).
-
-Customize the color or effect by editing `activeLinkClass` in the file above.

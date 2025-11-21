@@ -14,7 +14,7 @@ import {
   Timestamp,
   DocumentData,
 } from "firebase/firestore";
-import db from "@/lib/firebase";
+import { db, convertDatesToTimestamps, convertTimestampsToDates } from "@/lib/firebase";
 
 /* ---------------- Firestore Collection Reference ---------------- */
 const projectsCollection = collection(getFirestore(), "projects");
@@ -127,29 +127,3 @@ export async function getProjectFromFirestore(projectId: string) {
   return null;
 }
 
-/* ---------------- Utility: Date ↔ Timestamp ---------------- */
-function convertDatesToTimestamps(obj: any): any {
-  if (!obj || typeof obj !== "object") return obj;
-  const out: any = Array.isArray(obj) ? [] : {};
-  for (const key of Object.keys(obj)) {
-    const val = obj[key];
-    if (val instanceof Date) out[key] = Timestamp.fromDate(val);
-    else if (typeof val === "object" && val !== null)
-      out[key] = convertDatesToTimestamps(val);
-    else out[key] = val;
-  }
-  return out;
-}
-
-function convertTimestampsToDates(obj: any): any {
-  if (!obj || typeof obj !== "object") return obj;
-  const out: any = Array.isArray(obj) ? [] : {};
-  for (const key of Object.keys(obj)) {
-    const val = obj[key];
-    if (val && typeof val.toDate === "function") out[key] = val.toDate();
-    else if (typeof val === "object" && val !== null)
-      out[key] = convertTimestampsToDates(val);
-    else out[key] = val;
-  }
-  return out;
-}
