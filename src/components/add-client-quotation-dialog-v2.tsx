@@ -35,6 +35,7 @@ interface Props {
 
 export default function AddClientQuotationDialogV2({ children, onCreate }: Props) {
   const [projectName, setProjectName] = useState('');
+  const [projectTitle, setProjectTitle] = useState('');
   const [description, setDescription] = useState('');
   const [issueDate, setIssueDate] = useState(new Date().toISOString().slice(0, 10));
   const [validUntil, setValidUntil] = useState(() => {
@@ -62,9 +63,26 @@ export default function AddClientQuotationDialogV2({ children, onCreate }: Props
   }));
 
   const handleProductSelect = (productId: string) => {
-    const product = mockData.products.find(p => p.id === productId) as any;
-    if (product) {
+    if (!productId) return;
+    
+    // Find product from availableProducts first (faster)
+    const availableProduct = availableProducts.find(p => p.id === productId);
+    if (availableProduct) {
+      // Convert availableProduct to full Product object for the dialog
+      const product = {
+        ...availableProduct,
+        // Ensure all required Product fields exist
+        id: productId
+      } as Product;
       setSelectedProductForDialog(product);
+      setItemDialogOpen(true);
+      return;
+    }
+    
+    // Fallback to mockData if not found
+    const mockProduct = mockData.products.find(p => p.id === productId) as any;
+    if (mockProduct) {
+      setSelectedProductForDialog(mockProduct);
       setItemDialogOpen(true);
     }
   };
@@ -127,6 +145,7 @@ export default function AddClientQuotationDialogV2({ children, onCreate }: Props
       id: `QUOT-${Date.now()}`,
       quotationNumber: `QT-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`,
       projectName: projectName.trim(),
+      projectTitle: projectTitle.trim(),
       description: description.trim(),
       issueDate: new Date(issueDate),
       validUntil: new Date(validUntil),
@@ -143,6 +162,7 @@ export default function AddClientQuotationDialogV2({ children, onCreate }: Props
     
     // Reset form
     setProjectName('');
+    setProjectTitle('');
     setDescription('');
     setItems([]);
     setNotes('');
@@ -170,6 +190,16 @@ export default function AddClientQuotationDialogV2({ children, onCreate }: Props
                     value={projectName}
                     onChange={(e) => setProjectName(e.target.value)}
                     placeholder="Enter project name"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="projectTitle">Project Title</Label>
+                  <Input
+                    id="projectTitle"
+                    value={projectTitle}
+                    onChange={(e) => setProjectTitle(e.target.value)}
+                    placeholder="Enter project title"
                     className="mt-1"
                   />
                 </div>
@@ -244,35 +274,47 @@ export default function AddClientQuotationDialogV2({ children, onCreate }: Props
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {items.map((item, idx) => (
-                    <div key={idx} className="p-3 border rounded-lg bg-gray-50">
-                      <div className="flex justify-between items-start mb-2">
+                    <div key={idx} className="p-3 border rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                      <div className="flex justify-between items-start gap-2 mb-2">
                         <div className="flex-1">
-                          <p className="font-semibold">{item.productName}</p>
-                          <p className="text-sm text-gray-600">Qty: {item.quantity} × ${item.unitPrice} = ${(item.quantity * item.unitPrice).toFixed(2)}</p>
+                          <p className="font-semibold text-sm">{item.productName}</p>
+                          <p className="text-xs text-gray-600">SKU: {item.productName} | Qty: {item.quantity} × ${item.unitPrice.toFixed(2)}</p>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveItem(idx)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        <div className="text-right flex flex-col items-end gap-1">
+                          <p className="font-semibold text-blue-600">${(item.quantity * item.unitPrice).toFixed(2)}</p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveItem(idx)}
+                            className="text-red-600 hover:text-red-700 h-6 px-2"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
                       </div>
+                      
+                      {/* Services in same row */}
                       {item.selectedServices.length > 0 && (
-                        <div className="pt-2 border-t">
-                          <p className="text-xs font-medium text-gray-700 mb-1">Services:</p>
-                          <div className="flex flex-wrap gap-1">
+                        <div className="flex items-center gap-2 flex-wrap pt-2 border-t">
+                          <span className="text-xs font-medium text-gray-700">Services:</span>
+                          <div className="flex flex-wrap gap-2">
                             {item.selectedServices.map((service) => (
-                              <Badge key={service.serviceId} variant="secondary" className="text-xs">
-                                {service.serviceName}: ${service.servicePrice}
+                              <Badge key={service.serviceId} variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                                {service.serviceName}
+                                <span className="ml-1 font-semibold">${service.servicePrice.toFixed(2)}</span>
                               </Badge>
                             ))}
                           </div>
                         </div>
                       )}
-                      <div className="pt-2 text-right font-semibold text-blue-600">
-                        Item Total: ${item.amount.toFixed(2)}
+                      
+                      {/* Item Total */}
+                      <div className="pt-2 flex justify-between items-center">
+                        <span className="text-xs text-gray-600">
+                          Product: ${(item.quantity * item.unitPrice).toFixed(2)}
+                          {item.selectedServices.length > 0 && ` + Services: $${item.selectedServices.reduce((sum, s) => sum + s.servicePrice, 0).toFixed(2)}`}
+                        </span>
+                        <span className="font-semibold text-green-600">Total: ${item.amount.toFixed(2)}</span>
                       </div>
                     </div>
                   ))}

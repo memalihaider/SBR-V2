@@ -729,16 +729,21 @@ export type QuotationStatus =
 export interface Quotation {
   id: string;
   quotationNumber: string;
-  customerId: string;
+  customerId?: string;
+  projectName?: string;
+  projectTitle?: string;
+  description?: string;
   status: QuotationStatus;
   
   // Items
   items: Array<{
     productId: string;
+    productName?: string;
     quantity: number;
     unitPrice: number;
-    discount: number;
-    totalPrice: number;
+    discount?: number;
+    totalPrice?: number;
+    amount?: number;
     selectedServices?: Array<{
       serviceId: string;
       serviceName: string;
@@ -748,24 +753,26 @@ export interface Quotation {
   
   // Pricing
   subtotal: number;
-  discountAmount: number;
+  discountAmount?: number;
   taxAmount: number;
   totalAmount: number;
   
   // Terms
+  issueDate?: Date;
   validUntil: Date;
-  paymentTerms: string;
-  deliveryTerms: string;
+  paymentTerms?: string;
+  deliveryTerms?: string;
+  notes?: string;
   
   // Workflow
-  createdBy: string; // User ID
+  createdBy?: string; // User ID
   approvedBy?: string; // User ID
   
   // Conversion
   convertedToProject?: string; // Project ID
   
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 // =======================

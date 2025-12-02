@@ -63,11 +63,11 @@ const getProductInfo = (productId: string) => {
 
 // Calculate quotation totals and enrich data
 const enrichedQuotations = quotations.map(quotation => {
-  const customer = getCustomerInfo(quotation.customerId);
-  const createdByUser = getUserInfo(quotation.createdBy);
+  const customer = quotation.customerId ? getCustomerInfo(quotation.customerId) : null;
+  const createdByUser = quotation.createdBy ? getUserInfo(quotation.createdBy) : { name: 'System' };
   
   // Calculate totals from items
-  const subtotal = quotation.items.reduce((sum, item) => sum + item.totalPrice, 0);
+  const subtotal = quotation.items.reduce((sum, item) => sum + (item.totalPrice || item.amount || 0), 0);
   
   return {
     ...quotation,
