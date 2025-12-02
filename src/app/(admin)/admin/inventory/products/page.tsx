@@ -165,12 +165,10 @@ export default function AdminInventoryProductsPage() {
   };
 
   // ✅ NEW: Calculate total with services
+  // ✅ FIXED: Don't add service prices to product price - services are only for linking
   const calculateTotalWithServices = (product: Product) => {
-    let total = product.sellingPrice + (product.shippingCharges || 0);
-    if (product.services && product.services.length > 0) {
-      total += product.services.reduce((sum, service) => sum + service.total, 0);
-    }
-    return total;
+    // Product total = selling price + shipping (services are separate and linked only)
+    return product.sellingPrice + (product.shippingCharges || 0);
   };
 
   // Load data on component mount
@@ -401,11 +399,11 @@ export default function AdminInventoryProductsPage() {
     setSelectedServices(prev => prev.filter(service => service.serviceId !== serviceId));
   };
 
-  // ✅ NEW: Calculate total with services for form
+  // ✅ FIXED: Calculate total without adding service prices to product price
+  // Services are only linked to product, not included in product price
   const calculateFormTotalWithServices = () => {
-    let total = (productForm.sellingPrice || 0) + (productForm.shippingCharges || 0);
-    total += selectedServices.reduce((sum, service) => sum + service.total, 0);
-    return total;
+    // Form total = selling price + shipping (services NOT included in product price)
+    return (productForm.sellingPrice || 0) + (productForm.shippingCharges || 0);
   };
 
   // ✅ NEW: Load services when editing product
