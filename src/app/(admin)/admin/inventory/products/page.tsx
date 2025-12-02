@@ -1273,6 +1273,47 @@ export default function AdminInventoryProductsPage() {
                         </SelectContent>
                       </Select>
                     </div>
+
+                    {/* ✅ Category Preview Section */}
+                    {(productForm.mainCategoryId || productForm.subCategoryId) && (
+                      <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200">
+                        <h4 className="font-semibold text-gray-900 mb-3 text-sm">Selected Categories Preview</h4>
+                        <div className="grid grid-cols-2 gap-3">
+                          {/* Main Category Preview */}
+                          {productForm.mainCategoryId && (() => {
+                            const mainCat = getMainCategoryById(productForm.mainCategoryId);
+                            return (
+                              <div className="bg-white p-3 rounded-lg border border-blue-200 shadow-sm hover:shadow-md transition-shadow">
+                                <div className="flex items-center space-x-2">
+                                  <div className="text-3xl">{mainCat?.icon || '📁'}</div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs text-gray-500 font-medium uppercase">Main Category</p>
+                                    <p className="text-sm font-bold text-gray-900 truncate">{mainCat?.name}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })()}
+                          
+                          {/* Sub Category Preview */}
+                          {productForm.subCategoryId && (() => {
+                            const subCat = getSubCategoryById(productForm.subCategoryId);
+                            return (
+                              <div className="bg-white p-3 rounded-lg border border-indigo-200 shadow-sm hover:shadow-md transition-shadow">
+                                <div className="flex items-center space-x-2">
+                                  <div className="text-3xl">{subCat?.icon || '📂'}</div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs text-gray-500 font-medium uppercase">Sub Category</p>
+                                    <p className="text-sm font-bold text-gray-900 truncate">{subCat?.name}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    )}
+
                     <div className="space-y-2">
                       <Label htmlFor="modelNumber">Model Number</Label>
                       <Input
