@@ -119,6 +119,8 @@ export interface Customer {
     designation: string;
   };
   
+  phoneNumbers: { type: string; number: string; }[];
+  
   // Address
   address: {
     street: string;
@@ -194,17 +196,22 @@ export interface Product {
   id: string;
   sku: string;
   name: string;
+  productType: string;
   description: string;
+  orderSpecification: string;
   mainCategoryId: string; // Reference to MainCategory
   subCategoryId: string; // Reference to SubCategory
   category: ProductCategory; // Legacy field, now represents the full path (e.g., "Electronics/Semiconductors")
   manufacturer: string;
+  supplierName: string;
   modelNumber?: string;
 
   // Pricing
   costPrice: number;
   sellingPrice: number;
   margin: number;
+  marginPercentage: number;
+  shippingCharges: number;
 
   // Inventory
   currentStock: number;
@@ -221,6 +228,8 @@ export interface Product {
   status: ProductStatus;
   isSerialTracked: boolean;
   isBatchTracked: boolean;
+  services: ProductService[];
+  totalWithServices: number;
 
   // Vendor Info
   preferredVendor: string; // Vendor ID
@@ -408,6 +417,7 @@ export interface Vendor {
   
   // Categories
   productCategories: string[]; // Now array of strings for hierarchical categories
+  suppliedProducts: string[];
   
   status: VendorStatus;
   isActive: boolean;
@@ -713,7 +723,8 @@ export type QuotationStatus =
   | 'under_review'
   | 'approved'
   | 'rejected'
-  | 'expired';
+  | 'expired'
+  | 'converted';
 
 export interface Quotation {
   id: string;
@@ -1696,6 +1707,31 @@ export interface OnboardingMetrics {
   overdueTasks: number;
   upcomingTasks: number;
   mentorUtilization: Record<string, number>; // mentor ID -> active onboardings
+}
+
+// =======================
+// SERVICE TYPES
+// =======================
+
+export type ServiceStatus = 'active' | 'inactive';
+
+export interface Service {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  availability: 'available' | 'limited' | 'not_available';
+  status: ServiceStatus;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export interface ProductService {
+  serviceId: string;
+  serviceName: string;
+  quantity: number;
+  price: number;
+  total: number;
 }
 
 // Export all as default for easier importing

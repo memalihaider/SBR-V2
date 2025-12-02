@@ -304,15 +304,20 @@ function generateProducts(): Product[] {
         id: `prod-${products.length + 1}`,
         sku: `SKU-${faker.string.alphanumeric(8).toUpperCase()}`,
         name: productName,
+        productType: '',
         description: faker.commerce.productDescription(),
+        orderSpecification: '',
         mainCategoryId: mainCategory.id,
         subCategoryId: subCategory.id,
         category: `${mainCategory.name}/${subCategory.name}`, // Full path for backward compatibility
         manufacturer,
+        supplierName: '',
         modelNumber: faker.string.alphanumeric(10).toUpperCase(),
         costPrice,
         sellingPrice,
         margin,
+        marginPercentage: 0,
+        shippingCharges: 0,
         currentStock: faker.number.int({ min: 0, max: 1000 }),
         minStockLevel: faker.number.int({ min: 10, max: 50 }),
         maxStockLevel: faker.number.int({ min: 500, max: 1500 }),
@@ -328,6 +333,8 @@ function generateProducts(): Product[] {
         status: faker.helpers.arrayElement(['active', 'discontinued', 'out_of_stock', 'low_stock']),
         isSerialTracked: faker.datatype.boolean(),
         isBatchTracked: faker.datatype.boolean(),
+        services: [],
+        totalWithServices: 0,
         preferredVendor: `vendor-${faker.number.int({ min: 1, max: 30 })}`,
         alternateVendors: [`vendor-${faker.number.int({ min: 1, max: 30 })}`, `vendor-${faker.number.int({ min: 1, max: 30 })}`],
         createdAt: faker.date.past({ years: 2 }),
@@ -362,6 +369,10 @@ function generateCustomers(): Customer[] {
         phone: faker.phone.number(),
         designation: faker.person.jobTitle()
       },
+      phoneNumbers: [
+        { type: 'primary', number: faker.phone.number() },
+        { type: 'secondary', number: faker.phone.number() }
+      ],
       address: {
         street: faker.location.streetAddress(),
         city: faker.location.city(),

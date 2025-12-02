@@ -1,36 +1,40 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Users, Plus, Search, Filter, UserCheck, UserX, Clock, Download, Edit, Eye, Trash2, Mail, Phone, MapPin, Calendar, DollarSign } from 'lucide-react';
+import { Users, Plus, Search, Filter, UserCheck, UserX, Clock, Mail, Phone, MapPin, Calendar, DollarSign, Trash2, Eye, Edit } from 'lucide-react';
 import { useCurrency } from '@/lib/currency';
+import { toast } from 'sonner';
 
-interface Employee {
-  id: number;
+import type { Employee as EmployeeType } from '@/lib/employee';
+import {
+  subscribeEmployees,
+  addEmployee as addEmployeeFn,
+  updateEmployee as updateEmployeeFn,
+  deleteEmployee as deleteEmployeeFn,
+  subscribeDepartmentNames,
+} from '@/lib/employee';
+
+// Firebase imports add karein
+import { db } from '@/lib/firebase';
+import { collection, getDocs } from 'firebase/firestore';
+
+interface LocalEmployee extends Omit<EmployeeType, 'id'> {
+  id: string | number;
+}
+
+// Manager type define karein
+interface Manager {
+  id: string;
   name: string;
-  email: string;
-  phone: string;
   department: string;
-  position: string;
-  status: 'active' | 'inactive' | 'on-leave' | 'terminated';
-  joinDate: string;
-  salary: number;
-  address: string;
-  manager: string;
-  skills: string[];
-  emergencyContact: {
-    name: string;
-    relationship: string;
-    phone: string;
-  };
 }
 
 export default function EmployeesPage() {
@@ -40,7 +44,14 @@ export default function EmployeesPage() {
   const [isAddEmployeeOpen, setIsAddEmployeeOpen] = useState(false);
   const [isViewEmployeeOpen, setIsViewEmployeeOpen] = useState(false);
   const [isEditEmployeeOpen, setIsEditEmployeeOpen] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [employeeToDelete, setEmployeeToDelete] = useState<LocalEmployee | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<LocalEmployee | null>(null);
+
+  const [departmentsList, setDepartmentsList] = useState<{ id: string; name: string }[]>([]);
+  const [managersList, setManagersList] = useState<Manager[]>([]);
+  const [filteredManagers, setFilteredManagers] = useState<Manager[]>([]);
+
   const [newEmployee, setNewEmployee] = useState<{
     name: string;
     email: string;
@@ -65,132 +76,240 @@ export default function EmployeesPage() {
 
   const { formatAmount } = useCurrency();
 
-  const [employees, setEmployees] = useState<Employee[]>([
-    {
-      id: 1,
-      name: 'John Smith',
-      email: 'john.smith@techtronics.com',
-      phone: '+1 (555) 123-4567',
-      department: 'R&D',
-      position: 'Senior Hardware Engineer',
-      status: 'active',
-      joinDate: '2023-01-15',
-      salary: 95000,
-      address: '123 Silicon Valley Drive, San Jose, CA 95112',
-      manager: 'Sarah Johnson',
-      skills: ['Circuit Design', 'PCB Layout', 'Altium Designer', 'Signal Integrity'],
-      emergencyContact: {
-        name: 'Jane Smith',
-        relationship: 'Spouse',
-        phone: '+1 (555) 987-6543'
-      }
-    },
-    {
-      id: 2,
-      name: 'Sarah Johnson',
-      email: 'sarah.johnson@techtronics.com',
-      phone: '+1 (555) 234-5678',
-      department: 'Sales',
-      position: 'Electronics Sales Director',
-      status: 'active',
-      joinDate: '2022-08-20',
-      salary: 85000,
-      address: '456 Tech Park Ave, Austin, TX 78759',
-      manager: 'CEO',
-      skills: ['B2B Sales', 'Electronics Market', 'Customer Relations', 'Technical Presentations'],
-      emergencyContact: {
-        name: 'Mark Johnson',
-        relationship: 'Spouse',
-        phone: '+1 (555) 876-5432'
-      }
-    },
-    {
-      id: 3,
-      name: 'Mike Davis',
-      email: 'mike.davis@techtronics.com',
-      phone: '+1 (555) 345-6789',
-      department: 'Manufacturing',
-      position: 'Production Manager',
-      status: 'active',
-      joinDate: '2023-03-10',
-      salary: 78000,
-      address: '789 Industrial Park, Phoenix, AZ 85001',
-      manager: 'Sarah Johnson',
-      skills: ['SMT Assembly', 'Quality Control', 'Lean Manufacturing', 'ISO Standards'],
-      emergencyContact: {
-        name: 'Lisa Davis',
-        relationship: 'Spouse',
-        phone: '+1 (555) 765-4321'
-      }
-    },
-    {
-      id: 4,
-      name: 'Lisa Chen',
-      email: 'lisa.chen@techtronics.com',
-      phone: '+1 (555) 456-7890',
-      department: 'Quality Control',
-      position: 'QA Engineer',
-      status: 'active',
-      joinDate: '2022-11-05',
-      salary: 72000,
-      address: '321 Electronics Blvd, Raleigh, NC 27601',
-      manager: 'CEO',
-      skills: ['Quality Assurance', 'Testing Protocols', 'Failure Analysis', 'Compliance Standards'],
-      emergencyContact: {
-        name: 'Tom Chen',
-        relationship: 'Spouse',
-        phone: '+1 (555) 654-3210'
-      }
-    },
-    {
-      id: 5,
-      name: 'David Wilson',
-      email: 'david.wilson@techtronics.com',
-      phone: '+1 (555) 567-8901',
-      department: 'Supply Chain',
-      position: 'Procurement Specialist',
-      status: 'inactive',
-      joinDate: '2021-06-12',
-      salary: 68000,
-      address: '654 Component Drive, Denver, CO 80202',
-      manager: 'Sarah Johnson',
-      skills: ['Supplier Management', 'Component Sourcing', 'Inventory Control', 'Cost Analysis'],
-      emergencyContact: {
-        name: 'Mary Wilson',
-        relationship: 'Spouse',
-        phone: '+1 (555) 543-2109'
-      }
-    }
-  ]);
+  // employees driven by Firestore (subscribe)
+  const [employees, setEmployees] = useState<LocalEmployee[]>([]);
 
-  // Filter employees based on search and filters
-  const filteredEmployees = employees.filter(employee => {
-    const matchesSearch = searchTerm === '' ||
+  // Firebase se managers fetch karna - DIRECT department document se head field
+  const fetchManagers = async () => {
+    try {
+      const departmentsCollection = collection(db, 'departments');
+      const departmentSnapshot = await getDocs(departmentsCollection);
+      
+      const managers: Manager[] = [];
+      
+      // Har department document se directly head field fetch karna
+      departmentSnapshot.docs.forEach((deptDoc) => {
+        const deptData = deptDoc.data();
+        if (deptData.head) {
+          managers.push({
+            id: deptDoc.id,
+            name: deptData.head,
+            department: deptData.name || deptDoc.id
+          });
+        }
+      });
+      
+      setManagersList(managers);
+      console.log('Managers fetched:', managers); // Debugging ke liye
+    } catch (error) {
+      console.error('Error fetching managers:', error);
+      toast.error('Failed to load managers');
+    }
+  };
+
+  // Department change hone par managers filter karna
+  useEffect(() => {
+    if (newEmployee.department && managersList.length > 0) {
+      const departmentManagers = managersList.filter(
+        manager => manager.department === newEmployee.department
+      );
+      setFilteredManagers(departmentManagers);
+      
+      // Agar selected department ka koi manager hai to automatically set kar do
+      if (departmentManagers.length > 0) {
+        setNewEmployee(prev => ({
+          ...prev,
+          manager: departmentManagers[0].name
+        }));
+      } else {
+        // Agar koi manager nahi hai to empty set kar do
+        setNewEmployee(prev => ({
+          ...prev,
+          manager: ''
+        }));
+      }
+    } else {
+      setFilteredManagers([]);
+      setNewEmployee(prev => ({
+        ...prev,
+        manager: ''
+      }));
+    }
+  }, [newEmployee.department, managersList]);
+
+  // subscribe to employees and departments on mount
+  useEffect(() => {
+    const unsubEmp = subscribeEmployees(
+      (list) => {
+        const mapped = list.map((e) => ({ ...e, id: e.id as string }));
+        setEmployees(mapped);
+      },
+      (err) => {
+        console.error('Failed to subscribe employees', err);
+        toast.error('Failed to load employees');
+      }
+    );
+
+    const unsubDeps = subscribeDepartmentNames(
+      (list) => {
+        setDepartmentsList(list);
+      },
+      (err) => {
+        console.error('Failed to subscribe departments', err);
+      }
+    );
+
+    // Managers fetch karo
+    fetchManagers();
+
+    return () => {
+      try { unsubEmp(); } catch {}
+      try { unsubDeps(); } catch {}
+    };
+  }, []);
+
+  // Add Employee Dialog open hone par managers fetch karo
+  useEffect(() => {
+    if (isAddEmployeeOpen) {
+      fetchManagers();
+    }
+  }, [isAddEmployeeOpen]);
+
+  // Edit Employee Dialog open hone par managers fetch karo aur current employee ke department ke managers filter karo
+  useEffect(() => {
+    if (isEditEmployeeOpen && selectedEmployee) {
+      fetchManagers().then(() => {
+        const departmentManagers = managersList.filter(
+          manager => manager.department === selectedEmployee.department
+        );
+        setFilteredManagers(departmentManagers);
+      });
+    }
+  }, [isEditEmployeeOpen, selectedEmployee]);
+
+  // Filters: client-side (since we have full list)
+  const filteredEmployees = employees.filter((employee) => {
+    const matchesSearch =
+      searchTerm === '' ||
       employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.department.toLowerCase().includes(searchTerm.toLowerCase());
+      (employee.department || '').toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesDepartment = departmentFilter === 'all' || employee.department.toLowerCase() === departmentFilter;
+    const matchesDepartment = departmentFilter === 'all' || (employee.department || '').toLowerCase() === departmentFilter;
     const matchesStatus = statusFilter === 'all' || employee.status === statusFilter;
 
     return matchesSearch && matchesDepartment && matchesStatus;
   });
 
-  // Handle Add Employee
-  const handleAddEmployee = () => {
-    if (newEmployee.name && newEmployee.email && newEmployee.department) {
-      const employee: Employee = {
-        id: employees.length + 1,
-        ...newEmployee,
+  // Stats computed from live employees
+  const [stats, setStats] = useState([
+    {
+      title: 'Total Team Members',
+      value: '0',
+      change: '+0%',
+      icon: Users,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-100',
+    },
+    {
+      title: 'Active Engineers',
+      value: '0',
+      change: '+0%',
+      icon: UserCheck,
+      color: 'text-green-600',
+      bgColor: 'bg-green-100',
+    },
+    {
+      title: 'On Projects',
+      value: '0',
+      change: '+0%',
+      icon: Clock,
+      color: 'text-yellow-600',
+      bgColor: 'bg-yellow-100',
+    },
+   
+  ]);
+
+  const prevSnapshotRef = useRef({ total: 0, activeEngineers: 0, onProjects: 0, qc: 0 });
+
+  useEffect(() => {
+    const total = employees.length;
+
+    // Active Engineers: positions including 'engineer' OR department 'R&D'
+    const activeEngineers = employees.filter((e) =>
+      ((e.position || '').toLowerCase().includes('engineer') || (e.department || '').toLowerCase().includes('r&d')) &&
+      e.status === 'active'
+    ).length;
+
+    // On Projects: heuristic = active employees with a manager assigned (best-effort)
+    const onProjects = employees.filter((e) => e.status === 'active' && (e.manager || '').trim() !== '').length;
+
+    // Quality Control: department includes 'quality' or position includes 'quality'
+    const qc = employees.filter((e) =>
+      (e.department || '').toLowerCase().includes('quality') || (e.position || '').toLowerCase().includes('quality')
+    ).length;
+
+    const prev = prevSnapshotRef.current;
+
+    const makeChange = (curr: number, prevVal: number) => {
+      if (prevVal === 0) return curr === 0 ? '+0%' : `+${Math.round((curr - prevVal) / (prevVal === 0 ? 1 : prevVal) * 100)}%`;
+      const pct = Math.round(((curr - prevVal) / Math.abs(prevVal)) * 100);
+      return pct >= 0 ? `+${pct}%` : `${pct}%`;
+    };
+
+    const newStats = [
+      {
+        title: 'Total Team Members',
+        value: String(total),
+        change: makeChange(total, prev.total),
+        icon: Users,
+        color: 'text-blue-600',
+        bgColor: 'bg-blue-100',
+      },
+      {
+        title: 'Active Engineers',
+        value: String(activeEngineers),
+        change: makeChange(activeEngineers, prev.activeEngineers),
+        icon: UserCheck,
+        color: 'text-green-600',
+        bgColor: 'bg-green-100',
+      },
+      {
+        title: 'On Projects',
+        value: String(onProjects),
+        change: makeChange(onProjects, prev.onProjects),
+        icon: Clock,
+        color: 'text-yellow-600',
+        bgColor: 'bg-yellow-100',
+      },
+      
+    ];
+
+    prevSnapshotRef.current = { total, activeEngineers, onProjects, qc };
+    setStats(newStats);
+  }, [employees]);
+
+  // Add employee handler → Firestore
+  const handleAddEmployee = async () => {
+    if (!newEmployee.name || !newEmployee.email || !newEmployee.department) {
+      toast.error('Please fill required fields (name, email, department)');
+      return;
+    }
+
+    try {
+      await addEmployeeFn({
+        name: newEmployee.name,
+        email: newEmployee.email,
+        phone: newEmployee.phone,
+        department: newEmployee.department,
+        position: newEmployee.position,
+        salary: Number(newEmployee.salary || 0),
+        address: newEmployee.address,
+        manager: newEmployee.manager,
+        skills: newEmployee.skills ?? [],
         status: 'active',
-        joinDate: new Date().toISOString().split('T')[0],
-        emergencyContact: {
-          name: '',
-          relationship: '',
-          phone: ''
-        }
-      };
-      setEmployees([...employees, employee]);
+        emergencyContact: { name: '', relationship: '', phone: '' },
+      });
       setNewEmployee({
         name: '',
         email: '',
@@ -203,40 +322,55 @@ export default function EmployeesPage() {
         skills: [],
       });
       setIsAddEmployeeOpen(false);
+      toast.success('Team member added');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to add team member');
     }
   };
 
-  // Handle View Employee
-  const handleViewEmployee = (employee: Employee) => {
+  // View
+  const handleViewEmployee = (employee: LocalEmployee) => {
     setSelectedEmployee(employee);
     setIsViewEmployeeOpen(true);
   };
 
-  // Handle Edit Employee
-  const handleEditEmployee = (employee: Employee) => {
+  // Edit open
+  const handleEditEmployee = (employee: LocalEmployee) => {
     setSelectedEmployee(employee);
     setNewEmployee({
       name: employee.name,
       email: employee.email,
-      phone: employee.phone,
+      phone: employee.phone ?? '',
       department: employee.department,
-      position: employee.position,
-      salary: employee.salary,
-      address: employee.address,
-      manager: employee.manager,
-      skills: employee.skills,
+      position: employee.position ?? '',
+      salary: Number(employee.salary || 0),
+      address: employee.address ?? '',
+      manager: employee.manager ?? '',
+      skills: employee.skills ?? [],
     });
     setIsEditEmployeeOpen(true);
   };
 
-  // Handle Update Employee
-  const handleUpdateEmployee = () => {
-    if (selectedEmployee && newEmployee.name && newEmployee.email && newEmployee.department) {
-      setEmployees(employees.map(emp =>
-        emp.id === selectedEmployee.id
-          ? { ...emp, ...newEmployee }
-          : emp
-      ));
+  // Update → Firestore
+  const handleUpdateEmployee = async () => {
+    if (!selectedEmployee) return;
+    if (!newEmployee.name || !newEmployee.email || !newEmployee.department) {
+      toast.error('Please fill required fields (name, email, department)');
+      return;
+    }
+    try {
+      await updateEmployeeFn(String(selectedEmployee.id), {
+        name: newEmployee.name,
+        email: newEmployee.email,
+        phone: newEmployee.phone,
+        department: newEmployee.department,
+        position: newEmployee.position,
+        salary: Number(newEmployee.salary || 0),
+        address: newEmployee.address,
+        manager: newEmployee.manager,
+        skills: newEmployee.skills,
+      });
       setIsEditEmployeeOpen(false);
       setSelectedEmployee(null);
       setNewEmployee({
@@ -250,48 +384,41 @@ export default function EmployeesPage() {
         manager: '',
         skills: [],
       });
+      toast.success('Team member updated');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to update team member');
     }
   };
 
-  // Handle Delete Employee
-  const handleDeleteEmployee = (id: number) => {
-    setEmployees(employees.filter(emp => emp.id !== id));
+  // Delete Dialog open karega
+  const handleDeleteClick = (employee: LocalEmployee) => {
+    setEmployeeToDelete(employee);
+    setIsDeleteDialogOpen(true);
   };
 
-  const stats = [
-    {
-      title: 'Total Team Members',
-      value: '47',
-      change: '+8%',
-      icon: Users,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-100',
-    },
-    {
-      title: 'Active Engineers',
-      value: '32',
-      change: '+12%',
-      icon: UserCheck,
-      color: 'text-green-600',
-      bgColor: 'bg-green-100',
-    },
-    {
-      title: 'On Projects',
-      value: '8',
-      change: '+15%',
-      icon: Clock,
-      color: 'text-yellow-600',
-      bgColor: 'bg-yellow-100',
-    },
-    {
-      title: 'Quality Control',
-      value: '7',
-      change: '+5%',
-      icon: UserX,
-      color: 'text-red-600',
-      bgColor: 'bg-red-100',
-    },
-  ];
+  // Delete → Firestore
+  const handleDeleteEmployee = async () => {
+    if (!employeeToDelete) return;
+    
+    try {
+      await deleteEmployeeFn(String(employeeToDelete.id));
+      setIsDeleteDialogOpen(false);
+      setEmployeeToDelete(null);
+      toast.success('Team member deleted successfully');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to delete team member');
+    }
+  };
+
+  // Department change handler - managers update karega
+  const handleDepartmentChange = (value: string) => {
+    setNewEmployee(prev => ({
+      ...prev,
+      department: value,
+    }));
+  };
 
   return (
     <div className="space-y-6">
@@ -328,7 +455,7 @@ export default function EmployeesPage() {
                   >
                     {stat.change}
                   </span>{' '}
-                  <span className="text-gray-500">from last month</span>
+                  <span className="text-gray-500">from last snapshot</span>
                 </p>
               </CardContent>
             </Card>
@@ -365,6 +492,7 @@ export default function EmployeesPage() {
                 />
               </div>
             </div>
+
             <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
               <SelectTrigger className="w-full sm:w-48 border-2">
                 <Filter className="h-4 w-4 mr-2" />
@@ -372,15 +500,14 @@ export default function EmployeesPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Departments</SelectItem>
-                <SelectItem value="r&d">R&D</SelectItem>
-                <SelectItem value="manufacturing">Manufacturing</SelectItem>
-                <SelectItem value="quality control">Quality Control</SelectItem>
-                <SelectItem value="supply chain">Supply Chain</SelectItem>
-                <SelectItem value="sales">Sales</SelectItem>
-                <SelectItem value="finance">Finance</SelectItem>
-                <SelectItem value="hr">HR</SelectItem>
+                {departmentsList.map((d) => (
+                  <SelectItem key={d.id} value={d.name.toLowerCase()}>
+                    {d.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
+
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-full sm:w-48 border-2">
                 <SelectValue placeholder="Status" />
@@ -424,7 +551,7 @@ export default function EmployeesPage() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredEmployees.map((employee) => (
-                  <tr key={employee.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={String(employee.id)} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="shrink-0 h-10 w-10">
@@ -466,21 +593,32 @@ export default function EmployeesPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="text-red-600 border-red-300 hover:bg-red-50"
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-blue-600 border-blue-300 hover:bg-blue-50"
                           onClick={() => handleViewEmployee(employee)}
                         >
-                          View
+                          <Eye className="h-3 w-3 mr-1" />
+                        
                         </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="text-gray-600 border-gray-300 hover:bg-gray-50"
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-green-600 border-green-300 hover:bg-green-50"
                           onClick={() => handleEditEmployee(employee)}
                         >
-                          Edit
+                          <Edit className="h-3 w-3 mr-1" />
+                          
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-red-600 border-red-300 hover:bg-red-50"
+                          onClick={() => handleDeleteClick(employee)}
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          
                         </Button>
                       </div>
                     </td>
@@ -532,18 +670,16 @@ export default function EmployeesPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="department">Department *</Label>
-              <Select value={newEmployee.department} onValueChange={(value) => setNewEmployee({...newEmployee, department: value})}>
+              <Select value={newEmployee.department} onValueChange={handleDepartmentChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select department" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="r&d">R&D</SelectItem>
-                  <SelectItem value="manufacturing">Manufacturing</SelectItem>
-                  <SelectItem value="quality control">Quality Control</SelectItem>
-                  <SelectItem value="supply chain">Supply Chain</SelectItem>
-                  <SelectItem value="sales">Sales</SelectItem>
-                  <SelectItem value="finance">Finance</SelectItem>
-                  <SelectItem value="hr">HR</SelectItem>
+                  {departmentsList.map((d) => (
+                    <SelectItem key={d.id} value={d.name}>
+                      {d.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -574,14 +710,36 @@ export default function EmployeesPage() {
                 placeholder="Enter address"
               />
             </div>
-            <div className="space-y-2 md:col-span-2">
+            <div className="space-y-2">
               <Label htmlFor="manager">Manager</Label>
-              <Input
-                id="manager"
-                value={newEmployee.manager}
-                onChange={(e) => setNewEmployee({...newEmployee, manager: e.target.value})}
-                placeholder="Enter manager name"
-              />
+              <Select 
+                value={newEmployee.manager} 
+                onValueChange={(value) => setNewEmployee({...newEmployee, manager: value})}
+                disabled={!newEmployee.department || filteredManagers.length === 0}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={
+                    !newEmployee.department 
+                      ? "Select department first" 
+                      : filteredManagers.length === 0 
+                      ? "No manager available" 
+                      : "Select manager"
+                  } />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredManagers.map((manager) => (
+                    <SelectItem key={manager.id} value={manager.name}>
+                      {manager.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {newEmployee.department && filteredManagers.length === 0 && (
+                <p className="text-sm text-yellow-600">No manager found for this department</p>
+              )}
+              {newEmployee.department && filteredManagers.length > 0 && (
+                <p className="text-sm text-green-600">Manager automatically selected from department head</p>
+              )}
             </div>
           </div>
           <DialogFooter>
@@ -667,7 +825,7 @@ export default function EmployeesPage() {
                 </div>
               </div>
 
-              {selectedEmployee.skills.length > 0 && (
+              {(selectedEmployee.skills || []).length > 0 && (
                 <div>
                   <h4 className="text-sm font-semibold text-gray-900 mb-2">Skills</h4>
                   <div className="flex flex-wrap gap-2">
@@ -680,7 +838,7 @@ export default function EmployeesPage() {
                 </div>
               )}
 
-              {selectedEmployee.emergencyContact.name && (
+              {selectedEmployee.emergencyContact?.name && (
                 <div>
                   <h4 className="text-sm font-semibold text-gray-900 mb-2">Emergency Contact</h4>
                   <div className="bg-gray-50 p-3 rounded-lg">
@@ -740,18 +898,16 @@ export default function EmployeesPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-department">Department *</Label>
-              <Select value={newEmployee.department} onValueChange={(value) => setNewEmployee({...newEmployee, department: value})}>
+              <Select value={newEmployee.department} onValueChange={handleDepartmentChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select department" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="r&d">R&D</SelectItem>
-                  <SelectItem value="manufacturing">Manufacturing</SelectItem>
-                  <SelectItem value="quality control">Quality Control</SelectItem>
-                  <SelectItem value="supply chain">Supply Chain</SelectItem>
-                  <SelectItem value="sales">Sales</SelectItem>
-                  <SelectItem value="finance">Finance</SelectItem>
-                  <SelectItem value="hr">HR</SelectItem>
+                  {departmentsList.map((d) => (
+                    <SelectItem key={d.id} value={d.name}>
+                      {d.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -782,14 +938,36 @@ export default function EmployeesPage() {
                 placeholder="Enter address"
               />
             </div>
-            <div className="space-y-2 md:col-span-2">
+            <div className="space-y-2">
               <Label htmlFor="edit-manager">Manager</Label>
-              <Input
-                id="edit-manager"
-                value={newEmployee.manager}
-                onChange={(e) => setNewEmployee({...newEmployee, manager: e.target.value})}
-                placeholder="Enter manager name"
-              />
+              <Select 
+                value={newEmployee.manager} 
+                onValueChange={(value) => setNewEmployee({...newEmployee, manager: value})}
+                disabled={!newEmployee.department || filteredManagers.length === 0}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={
+                    !newEmployee.department 
+                      ? "Select department first" 
+                      : filteredManagers.length === 0 
+                      ? "No manager available" 
+                      : "Select manager"
+                  } />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredManagers.map((manager) => (
+                    <SelectItem key={manager.id} value={manager.name}>
+                      {manager.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {newEmployee.department && filteredManagers.length === 0 && (
+                <p className="text-sm text-yellow-600">No manager found for this department</p>
+              )}
+              {newEmployee.department && filteredManagers.length > 0 && (
+                <p className="text-sm text-green-600">Manager automatically selected from department head</p>
+              )}
             </div>
           </div>
           <DialogFooter>
@@ -798,6 +976,60 @@ export default function EmployeesPage() {
             </Button>
             <Button onClick={handleUpdateEmployee} className="bg-red-600 hover:bg-red-700">
               Update Team Member
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="max-w-md bg-white border-2 border-red-200 shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-gray-900 flex items-center">
+              <Trash2 className="h-5 w-5 text-red-600 mr-2" />
+              Delete Team Member
+            </DialogTitle>
+            <DialogDescription className="text-gray-600">
+              Are you sure you want to delete this team member? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          {employeeToDelete && (
+            <div className="py-4">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-center space-x-3">
+                  <div className="h-10 w-10 rounded-full bg-linear-to-br from-red-400 to-red-600 flex items-center justify-center">
+                    <span className="text-sm font-semibold text-white">
+                      {employeeToDelete.name.split(' ').map(n => n[0]).join('')}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900">{employeeToDelete.name}</p>
+                    <p className="text-sm text-gray-600">{employeeToDelete.position} • {employeeToDelete.department}</p>
+                    <p className="text-sm text-gray-500">{employeeToDelete.email}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm text-yellow-800 font-medium">
+                  ⚠️ Warning: This will permanently remove the team member from the system.
+                </p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsDeleteDialogOpen(false)}
+              className="border-gray-300 hover:bg-gray-50"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleDeleteEmployee} 
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Team Member
             </Button>
           </DialogFooter>
         </DialogContent>
