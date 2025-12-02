@@ -739,6 +739,11 @@ export interface Quotation {
     unitPrice: number;
     discount: number;
     totalPrice: number;
+    selectedServices?: Array<{
+      serviceId: string;
+      serviceName: string;
+      servicePrice: number;
+    }>;
   }>;
   
   // Pricing

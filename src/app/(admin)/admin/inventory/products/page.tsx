@@ -102,7 +102,8 @@ export default function AdminInventoryProductsPage() {
     maxStockLevel: 1000,
     reorderPoint: 20,
     status: 'active' as ProductStatus,
-    services: []
+    services: [],
+    images: []
   });
 
   const itemsPerPage = 15;
@@ -508,7 +509,7 @@ export default function AdminInventoryProductsPage() {
         reorderPoint: productForm.reorderPoint || 20,
         status: productForm.status || 'active',
         specifications: {},
-        images: [],
+        images: productForm.images || [],
         isSerialTracked: false,
         isBatchTracked: false,
         preferredVendor: '',
@@ -688,7 +689,16 @@ export default function AdminInventoryProductsPage() {
                   <SelectItem value="all">All Main Categories</SelectItem>
                   {mainCategories.map((category) => (
                     <SelectItem key={category.id} value={category.id}>
-                      {category.icon} {category.name}
+                      <div className="flex items-center gap-2">
+                        {category.icon && (
+                          category.icon.startsWith('http') ? (
+                            <img src={category.icon} alt={category.name} className="w-5 h-5 object-cover rounded" />
+                          ) : (
+                            <span className="text-lg">{category.icon}</span>
+                          )
+                        )}
+                        <span>{category.name}</span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -705,7 +715,16 @@ export default function AdminInventoryProductsPage() {
                   <SelectItem value="all">All Sub Categories</SelectItem>
                   {mainCategoryFilter !== 'all' && getSubCategoriesByMainCategory(mainCategoryFilter).map((subCategory) => (
                     <SelectItem key={subCategory.id} value={subCategory.id}>
-                      {subCategory.icon} {subCategory.name}
+                      <div className="flex items-center gap-2">
+                        {subCategory.icon && (
+                          subCategory.icon.startsWith('http') ? (
+                            <img src={subCategory.icon} alt={subCategory.name} className="w-5 h-5 object-cover rounded" />
+                          ) : (
+                            <span className="text-lg">{subCategory.icon}</span>
+                          )
+                        )}
+                        <span>{subCategory.name}</span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1225,6 +1244,35 @@ export default function AdminInventoryProductsPage() {
                     />
                   </div>
 
+                  <div className="space-y-2">
+                    <Label htmlFor="productImage">Product Image URL</Label>
+                    <div className="space-y-2">
+                      <Input
+                        id="productImage"
+                        value={productForm.images?.[0] || ''}
+                        onChange={(e) => setProductForm({ ...productForm, images: e.target.value ? [e.target.value] : [] })}
+                        placeholder="Enter product image URL (e.g., https://example.com/image.jpg)"
+                      />
+                      {productForm.images?.[0] && (
+                        <div className="mt-2 p-2 border border-gray-200 rounded-lg bg-gray-50">
+                          <p className="text-xs text-gray-600 mb-2">Image Preview:</p>
+                          <img 
+                            src={productForm.images[0]} 
+                            alt="Product preview" 
+                            className="max-w-xs h-32 object-cover rounded-lg"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                              const errorDiv = document.createElement('div');
+                              errorDiv.className = 'text-xs text-red-500';
+                              errorDiv.textContent = 'Failed to load image';
+                              (e.target as HTMLImageElement).parentElement?.appendChild(errorDiv);
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="mainCategory">Main Category *</Label>
@@ -1318,7 +1366,17 @@ export default function AdminInventoryProductsPage() {
                               return (
                                 <div className="bg-white p-3 rounded-lg border border-blue-200 shadow-sm hover:shadow-md transition-shadow">
                                   <div className="flex items-center space-x-2">
-                                    <div className="text-3xl flex-shrink-0">{mainCat.icon || '📁'}</div>
+                                    <div className="flex-shrink-0">
+                                      {mainCat.icon ? (
+                                        mainCat.icon.startsWith('http') ? (
+                                          <img src={mainCat.icon} alt={mainCat.name} className="w-8 h-8 object-cover rounded" />
+                                        ) : (
+                                          <span className="text-3xl">{mainCat.icon}</span>
+                                        )
+                                      ) : (
+                                        <span className="text-3xl">📁</span>
+                                      )}
+                                    </div>
                                     <div className="flex-1 min-w-0">
                                       <p className="text-xs text-gray-500 font-medium uppercase">Main Category</p>
                                       <p className="text-sm font-bold text-gray-900 truncate">{mainCat.name}</p>
@@ -1335,7 +1393,17 @@ export default function AdminInventoryProductsPage() {
                               return (
                                 <div className="bg-white p-3 rounded-lg border border-indigo-200 shadow-sm hover:shadow-md transition-shadow">
                                   <div className="flex items-center space-x-2">
-                                    <div className="text-3xl flex-shrink-0">{subCat.icon || '📂'}</div>
+                                    <div className="flex-shrink-0">
+                                      {subCat.icon ? (
+                                        subCat.icon.startsWith('http') ? (
+                                          <img src={subCat.icon} alt={subCat.name} className="w-8 h-8 object-cover rounded" />
+                                        ) : (
+                                          <span className="text-3xl">{subCat.icon}</span>
+                                        )
+                                      ) : (
+                                        <span className="text-3xl">📂</span>
+                                      )}
+                                    </div>
                                     <div className="flex-1 min-w-0">
                                       <p className="text-xs text-gray-500 font-medium uppercase">Sub Category</p>
                                       <p className="text-sm font-bold text-gray-900 truncate">{subCat.name}</p>
