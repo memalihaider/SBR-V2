@@ -427,8 +427,14 @@ export default function AdminInventoryProductsPage() {
   };
 
   const handleEditProduct = (product: Product) => {
-    setSelectedProduct(product);
-    setProductForm(product);
+    // Clean up category fields if they contain URLs instead of IDs
+    const cleanedProduct = {
+      ...product,
+      mainCategoryId: product.mainCategoryId?.startsWith('http') ? '' : product.mainCategoryId,
+      subCategoryId: product.subCategoryId?.startsWith('http') ? '' : product.subCategoryId
+    };
+    setSelectedProduct(cleanedProduct);
+    setProductForm(cleanedProduct);
     setSelectedServices(product.services || []);
     setIsEditDialogOpen(true);
   };
@@ -1275,44 +1281,55 @@ export default function AdminInventoryProductsPage() {
                     </div>
 
                     {/* ✅ Category Preview Section */}
-                    {(productForm.mainCategoryId || productForm.subCategoryId) && (
-                      <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200">
-                        <h4 className="font-semibold text-gray-900 mb-3 text-sm">Selected Categories Preview</h4>
-                        <div className="grid grid-cols-2 gap-3">
-                          {/* Main Category Preview */}
-                          {productForm.mainCategoryId && (() => {
-                            const mainCat = getMainCategoryById(productForm.mainCategoryId);
-                            return (
-                              <div className="bg-white p-3 rounded-lg border border-blue-200 shadow-sm hover:shadow-md transition-shadow">
-                                <div className="flex items-center space-x-2">
-                                  <div className="text-3xl">{mainCat?.icon || '📁'}</div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-xs text-gray-500 font-medium uppercase">Main Category</p>
-                                    <p className="text-sm font-bold text-gray-900 truncate">{mainCat?.name}</p>
+                    {(() => {
+                      // Only show if we have valid IDs (not URLs)
+                      const isValidId = (str: string | undefined) => str && typeof str === 'string' && !str.startsWith('http');
+                      const mainCatId = isValidId(productForm.mainCategoryId) ? productForm.mainCategoryId : '';
+                      const subCatId = isValidId(productForm.subCategoryId) ? productForm.subCategoryId : '';
+                      
+                      if (!mainCatId && !subCatId) return null;
+                      
+                      return (
+                        <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200">
+                          <h4 className="font-semibold text-gray-900 mb-3 text-sm">Selected Categories</h4>
+                          <div className="grid grid-cols-2 gap-3">
+                            {/* Main Category Preview */}
+                            {mainCatId && (() => {
+                              const mainCat = getMainCategoryById(mainCatId);
+                              if (!mainCat) return null;
+                              return (
+                                <div className="bg-white p-3 rounded-lg border border-blue-200 shadow-sm hover:shadow-md transition-shadow">
+                                  <div className="flex items-center space-x-2">
+                                    <div className="text-3xl flex-shrink-0">{mainCat.icon || '📁'}</div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-xs text-gray-500 font-medium uppercase">Main Category</p>
+                                      <p className="text-sm font-bold text-gray-900 truncate">{mainCat.name}</p>
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            );
-                          })()}
-                          
-                          {/* Sub Category Preview */}
-                          {productForm.subCategoryId && (() => {
-                            const subCat = getSubCategoryById(productForm.subCategoryId);
-                            return (
-                              <div className="bg-white p-3 rounded-lg border border-indigo-200 shadow-sm hover:shadow-md transition-shadow">
-                                <div className="flex items-center space-x-2">
-                                  <div className="text-3xl">{subCat?.icon || '📂'}</div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-xs text-gray-500 font-medium uppercase">Sub Category</p>
-                                    <p className="text-sm font-bold text-gray-900 truncate">{subCat?.name}</p>
+                              );
+                            })()}
+                            
+                            {/* Sub Category Preview */}
+                            {subCatId && (() => {
+                              const subCat = getSubCategoryById(subCatId);
+                              if (!subCat) return null;
+                              return (
+                                <div className="bg-white p-3 rounded-lg border border-indigo-200 shadow-sm hover:shadow-md transition-shadow">
+                                  <div className="flex items-center space-x-2">
+                                    <div className="text-3xl flex-shrink-0">{subCat.icon || '📂'}</div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-xs text-gray-500 font-medium uppercase">Sub Category</p>
+                                      <p className="text-sm font-bold text-gray-900 truncate">{subCat.name}</p>
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            );
-                          })()}
+                              );
+                            })()}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
 
                     <div className="space-y-2">
                       <Label htmlFor="modelNumber">Model Number</Label>
