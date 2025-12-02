@@ -130,7 +130,7 @@ export default function AdminInventoryProductsPage() {
     CAD: 'C$',
     AUD: 'A$',
     CNY: '¥',
-    AED: 'د.إ' // Arabic Dirham symbol
+    AED: 'AED' // Arabic Dirham symbol
   };
 
   // Format currency function
@@ -1246,7 +1246,16 @@ export default function AdminInventoryProductsPage() {
                         <SelectContent>
                           {mainCategories.map((category) => (
                             <SelectItem key={category.id} value={category.id}>
-                              {category.icon} {category.name}
+                              <div className="flex items-center gap-2">
+                                {category.icon && (
+                                  category.icon.startsWith('http') ? (
+                                    <img src={category.icon} alt={category.name} className="w-5 h-5 object-cover rounded" />
+                                  ) : (
+                                    <span className="text-lg">{category.icon}</span>
+                                  )
+                                )}
+                                <span>{category.name}</span>
+                              </div>
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -1273,7 +1282,16 @@ export default function AdminInventoryProductsPage() {
                         <SelectContent>
                           {productForm.mainCategoryId && getSubCategoriesByMainCategory(productForm.mainCategoryId).map((subCategory) => (
                             <SelectItem key={subCategory.id} value={subCategory.id}>
-                              {subCategory.icon} {subCategory.name}
+                              <div className="flex items-center gap-2">
+                                {subCategory.icon && (
+                                  subCategory.icon.startsWith('http') ? (
+                                    <img src={subCategory.icon} alt={subCategory.name} className="w-5 h-5 object-cover rounded" />
+                                  ) : (
+                                    <span className="text-lg">{subCategory.icon}</span>
+                                  )
+                                )}
+                                <span>{subCategory.name}</span>
+                              </div>
                             </SelectItem>
                           ))}
                         </SelectContent>
